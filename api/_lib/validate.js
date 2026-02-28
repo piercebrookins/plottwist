@@ -1,4 +1,4 @@
-import { VALID_STATUSES } from "./constants";
+import { VALID_STATUSES } from "./constants.js";
 
 export const validateHeartbeat = (payload) => {
   const roomCode = String(payload.roomCode || "").trim().toUpperCase();

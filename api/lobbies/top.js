@@ -1,7 +1,7 @@
-import { INDEX_KEY } from "../_lib/constants";
-import { allowOptions, cors, json } from "../_lib/http";
-import { redis } from "../_lib/redis";
-import { computeActivityScore } from "../_lib/score";
+import { INDEX_KEY } from "../_lib/constants.js";
+import { allowOptions, cors, json } from "../_lib/http.js";
+import { redis } from "../_lib/redis.js";
+import { computeActivityScore } from "../_lib/score.js";
 
 const readAll = async () => {
   const rooms = (await redis.smembers(INDEX_KEY)) || [];

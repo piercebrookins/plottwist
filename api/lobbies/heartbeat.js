@@ -1,8 +1,8 @@
-import { INDEX_KEY, LOBBY_TTL_SECONDS, RATE_LIMIT_MAX_HITS, RATE_LIMIT_WINDOW_MS } from "../_lib/constants";
-import { allowOptions, cors, json, readBody } from "../_lib/http";
-import { redis } from "../_lib/redis";
-import { computeActivityScore } from "../_lib/score";
-import { validateHeartbeat } from "../_lib/validate";
+import { INDEX_KEY, LOBBY_TTL_SECONDS, RATE_LIMIT_MAX_HITS, RATE_LIMIT_WINDOW_MS } from "../_lib/constants.js";
+import { allowOptions, cors, json, readBody } from "../_lib/http.js";
+import { redis } from "../_lib/redis.js";
+import { computeActivityScore } from "../_lib/score.js";
+import { validateHeartbeat } from "../_lib/validate.js";
 
 const rateLimitKey = (ip, roomCode) => `ratelimit:${ip}:${roomCode}`;
 
