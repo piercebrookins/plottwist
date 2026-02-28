@@ -17,6 +17,16 @@ export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
     if (seconds === 0 && me?.isHost) onForceClose();
   }, [seconds, me?.isHost, onForceClose]);
 
+  useEffect(() => {
+    if (!me?.isHost) return;
+    const nonHostPlayers = session.players.filter((p) => !p.isHost);
+    if (!nonHostPlayers.length) return;
+    const allSubmitted = nonHostPlayers.every((p) =>
+      round.submissions.some((s) => s.playerId === p.id)
+    );
+    if (allSubmitted) onForceClose();
+  }, [me?.isHost, session.players, round.submissions, onForceClose]);
+
   const mine = round.submissions.find((s) => s.playerId === me.id);
   const timerClass = seconds <= 10 ? "timer-urgent" : seconds <= 20 ? "timer-warning" : "timer-normal";
 

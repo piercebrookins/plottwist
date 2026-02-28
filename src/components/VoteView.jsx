@@ -2,32 +2,38 @@ import { useEffect, useMemo, useState } from "react";
 import { playerName } from "../game/selectors";
 import { Screen } from "./Layout";
 
-export const VoteView = ({ session, me, round, onVote, onFinishVoting }) => {
-  const [showcaseIndex, setShowcaseIndex] = useState(0);
-  const [phase, setPhase] = useState("showcase");
+export const VoteView = ({
+  session,
+  me,
+  round,
+  onVote,
+  onFinishVoting,
+  onNextClip,
+  onStartVoting,
+}) => {
   const [seconds, setSeconds] = useState(session.settings.voteSeconds || 20);
 
   useEffect(() => {
-    setShowcaseIndex(0);
-    setPhase("showcase");
-    setSeconds(session.settings.voteSeconds || 20);
-  }, [round.id, session.settings.voteSeconds]);
-
-  useEffect(() => {
-    if (phase !== "voting") return;
-    const timer = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(timer);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase === "voting" && seconds === 0 && me.isHost) {
-      onFinishVoting();
+    if (round.votePhase !== "voting") {
+      setSeconds(session.settings.voteSeconds || 20);
+      return;
     }
-  }, [phase, seconds, me.isHost, onFinishVoting]);
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil(((round.voteEndsAt || Date.now()) - Date.now()) / 1000));
+      setSeconds(remaining);
+      if (remaining === 0 && me.isHost) onFinishVoting();
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [round.votePhase, round.voteEndsAt, session.settings.voteSeconds, me.isHost, onFinishVoting]);
 
   const mySubmission = round.submissions.find((s) => s.playerId === me.id);
   const myVote = round.votes.find((v) => v.voterId === me.id);
 
+  const showcaseIndex = round.showcaseIndex || 0;
   const showcaseDone = showcaseIndex >= round.submissions.length;
   const active = round.submissions[showcaseIndex];
 
@@ -37,24 +43,36 @@ export const VoteView = ({ session, me, round, onVote, onFinishVoting }) => {
     return "timer-normal";
   }, [seconds]);
 
-  const showcaseProgress = ((showcaseIndex + 1) / round.submissions.length) * 100;
+  const showcaseProgress = round.submissions.length
+    ? ((Math.min(showcaseIndex + 1, round.submissions.length)) / round.submissions.length) * 100
+    : 0;
 
-  if (phase === "showcase" && !showcaseDone) {
+  if (round.votePhase === "showcase" && !showcaseDone) {
     return (
       <Screen
         title={`Watch clips ${showcaseIndex + 1}/${round.submissions.length}`}
         subtitle="Watch every generated video before voting opens"
         actions={
-          <>
-            <button onClick={() => setShowcaseIndex((i) => i + 1)}>Skip / Next</button>
-            {showcaseIndex === round.submissions.length - 1 ? (
-              <button onClick={() => setPhase("voting")}>Start voting</button>
-            ) : null}
-          </>
+          me.isHost ? (
+            <>
+              <button onClick={onNextClip}>Skip / Next</button>
+              {showcaseIndex === round.submissions.length - 1 ? (
+                <button onClick={onStartVoting}>Start voting</button>
+              ) : null}
+            </>
+          ) : (
+            <p>Host is controlling showcase…</p>
+          )
         }
       >
         <article className="card reveal vote-showcase">
-          <div className="showcase-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={showcaseProgress}>
+          <div
+            className="showcase-progress"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow={showcaseProgress}
+          >
             <div className="showcase-progress__bar" style={{ width: `${showcaseProgress}%` }} />
           </div>
 
@@ -67,11 +85,13 @@ export const VoteView = ({ session, me, round, onVote, onFinishVoting }) => {
               autoPlay
               muted
               playsInline
-              onEnded={() => setShowcaseIndex((i) => Math.min(i + 1, round.submissions.length))}
+              onEnded={() => me.isHost && onNextClip()}
             />
             <div className="video-overlay">
               <span className="video-overlay__player">{playerName(session, active.playerId)}</span>
-              <span className="video-overlay__index">Clip {showcaseIndex + 1}/{round.submissions.length}</span>
+              <span className="video-overlay__index">
+                Clip {showcaseIndex + 1}/{round.submissions.length}
+              </span>
             </div>
           </div>
 
@@ -82,12 +102,12 @@ export const VoteView = ({ session, me, round, onVote, onFinishVoting }) => {
     );
   }
 
-  if (phase === "showcase" && showcaseDone) {
+  if (round.votePhase === "showcase" && showcaseDone) {
     return (
       <Screen
         title="Showcase complete"
-        subtitle="All clips shown. Time to vote."
-        actions={<button onClick={() => setPhase("voting")}>Open voting</button>}
+        subtitle="All clips shown. Waiting for host to open voting."
+        actions={me.isHost ? <button onClick={onStartVoting}>Open voting</button> : null}
       />
     );
   }
@@ -99,7 +119,12 @@ export const VoteView = ({ session, me, round, onVote, onFinishVoting }) => {
       actions={me.isHost ? <button onClick={onFinishVoting}>Close voting now</button> : null}
     >
       <div className={`timer ${timerClass}`}>
-        <div className="timer-circle" style={{ "--progress": `${(seconds / (session.settings.voteSeconds || 20)) * 100}%` }}>
+        <div
+          className="timer-circle"
+          style={{
+            "--progress": `${(seconds / (session.settings.voteSeconds || 20)) * 100}%`,
+          }}
+        >
           <span className="timer-value">{seconds}</span>
         </div>
         <span className="timer-label">voting seconds</span>
@@ -119,7 +144,9 @@ export const VoteView = ({ session, me, round, onVote, onFinishVoting }) => {
                 >
                   <span className="mobile-vote-content">
                     <span className="mobile-vote-answer">{submission.generatedScene}</span>
-                    <span className="mobile-vote-author">{disabled ? "Your entry" : "Tap to vote"}</span>
+                    <span className="mobile-vote-author">
+                      {disabled ? "Your entry" : "Tap to vote"}
+                    </span>
                   </span>
                   <span className="mobile-vote-check">✓</span>
                 </button>

@@ -101,6 +101,9 @@ export const beginRound = (session) => ({
       revealCursor: 0,
       winnerSubmissionId: null,
       scoredAt: null,
+      votePhase: "showcase",
+      showcaseIndex: 0,
+      voteEndsAt: null,
     },
   ],
 });
@@ -201,6 +204,45 @@ export const withGeneratedScenes = (session, generatedSubmissions) => {
         ...round,
         status: GAME_STAGES.VOTE,
         submissions: generatedSubmissions,
+        votePhase: "showcase",
+        showcaseIndex: 0,
+        voteEndsAt: null,
+      },
+    ],
+  };
+};
+
+export const advanceVoteShowcase = (session) => {
+  const round = session.rounds.at(-1);
+  if (!round || round.status !== GAME_STAGES.VOTE) return session;
+
+  if (round.votePhase !== "showcase") return session;
+
+  const nextIndex = Math.min((round.showcaseIndex || 0) + 1, round.submissions.length);
+  return {
+    ...session,
+    rounds: [
+      ...session.rounds.slice(0, -1),
+      {
+        ...round,
+        showcaseIndex: nextIndex,
+      },
+    ],
+  };
+};
+
+export const openVotingPhase = (session) => {
+  const round = session.rounds.at(-1);
+  if (!round || round.status !== GAME_STAGES.VOTE) return session;
+
+  return {
+    ...session,
+    rounds: [
+      ...session.rounds.slice(0, -1),
+      {
+        ...round,
+        votePhase: "voting",
+        voteEndsAt: Date.now() + (session.settings.voteSeconds || 20) * 1000,
       },
     ],
   };
@@ -219,6 +261,7 @@ export const closeVoting = (session) => {
         ...round,
         status: GAME_STAGES.REVEAL,
         revealCursor: 0,
+        votePhase: "closed",
       },
     ],
   };

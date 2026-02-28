@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   addPlayer,
   advanceRevealCursor,
@@ -6,6 +6,8 @@ import {
   closeSubmissions,
   closeVoting,
   createSession,
+  openVotingPhase,
+  advanceVoteShowcase,
   nextRoundOrFinal,
   resetGame,
   setStage,
@@ -35,6 +37,7 @@ function App() {
   const [roomCode, setRoomCode] = useState(null);
   const [playerId, setPlayerId] = useState(null);
   const { session, update } = useSessionStore(roomCode);
+  const generatingRoundRef = useRef(null);
 
   const me = useMemo(() => playerById(session, playerId), [session, playerId]);
   const round = currentRound(session);
@@ -64,28 +67,40 @@ function App() {
 
   const closeAndGenerate = async () => {
     if (!session || !me?.isHost) return;
-    const closed = closeSubmissions(session);
-    update(closed);
 
-    const r = currentRound(closed);
-    const generated = await Promise.all(
-      r.submissions.map(async (submission) => {
-        const ai = await generateScene({
-          prompt: r.prompt,
-          twist: submission.text,
-          memory: closed.memory,
-          style: closed.settings.revealStyle,
-        });
-        return { ...submission, ...ai };
-      })
-    );
+    const roundId = currentRound(session)?.id;
+    if (!roundId) return;
+    if (generatingRoundRef.current === roundId) return;
+    generatingRoundRef.current = roundId;
 
-    update(withGeneratedScenes(closed, generated));
+    try {
+      const closed = closeSubmissions(session);
+      update(closed);
+
+      const r = currentRound(closed);
+      const generated = await Promise.all(
+        r.submissions.map(async (submission) => {
+          const ai = await generateScene({
+            prompt: r.prompt,
+            twist: submission.text,
+            memory: closed.memory,
+            style: closed.settings.revealStyle,
+          });
+          return { ...submission, ...ai };
+        })
+      );
+
+      update(withGeneratedScenes(closed, generated));
+    } finally {
+      generatingRoundRef.current = null;
+    }
   };
 
   const vote = (submissionId) => apply((s) => withVote(s, { voterId: me.id, submissionId }));
 
   const scoreRound = () => apply((s) => closeVoting(s));
+  const nextShowcaseClip = () => apply((s) => advanceVoteShowcase(s));
+  const startVoting = () => apply((s) => openVotingPhase(s));
 
   const goNextRound = () => apply((s) => nextRoundOrFinal(s));
 
@@ -133,7 +148,17 @@ function App() {
   }
 
   if (session.status === GAME_STAGES.VOTE && round) {
-    return <VoteView session={session} me={me} round={round} onVote={vote} onFinishVoting={scoreRound} />;
+    return (
+      <VoteView
+        session={session}
+        me={me}
+        round={round}
+        onVote={vote}
+        onFinishVoting={scoreRound}
+        onNextClip={nextShowcaseClip}
+        onStartVoting={startVoting}
+      />
+    );
   }
 
   if (session.status === GAME_STAGES.REVEAL && round) {
