@@ -42,6 +42,7 @@ export const HACKATHON_PROBLEM_STATEMENTS = {
 export const MEDIA_MODES = {
   VIDEO: "video",
   IMAGE: "image",
+  PLACEHOLDER: "placeholder",
 };
 
 export const DEFAULT_SETTINGS = {
