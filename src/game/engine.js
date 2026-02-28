@@ -285,16 +285,22 @@ export const advanceRevealCursor = (session) => {
 
   const maxRevealCount = round.winnerSubmissionId ? 1 : round.submissions.length;
   const nextCursor = Math.min(round.revealCursor + 1, maxRevealCount);
-  const nextStage = nextCursor >= maxRevealCount ? GAME_STAGES.ROUND_RESULT : GAME_STAGES.REVEAL;
+  const done = nextCursor >= maxRevealCount;
 
-  return {
+  const progressed = {
     ...session,
-    status: nextStage,
+    status: done ? GAME_STAGES.ROUND_RESULT : GAME_STAGES.REVEAL,
     rounds: [
       ...session.rounds.slice(0, -1),
-      { ...round, revealCursor: nextCursor, status: nextStage },
+      {
+        ...round,
+        revealCursor: nextCursor,
+        status: done ? GAME_STAGES.ROUND_RESULT : GAME_STAGES.REVEAL,
+      },
     ],
   };
+
+  return done ? completeRound(progressed) : progressed;
 };
 
 export const withVote = (session, { voterId, submissionId }) => {
