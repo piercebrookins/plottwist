@@ -18,7 +18,7 @@ import {
   withVote,
 } from "./game/engine";
 import { GAME_STAGES } from "./game/constants";
-import { generateContinuationPrompt, generateScene } from "./game/geminiMock";
+import { generateContinuationPrompt, generateScene } from "./game/geminiReal";
 import { loadMostRecentSession, loadSession, saveSession } from "./game/storage";
 import { currentRound, playerById } from "./game/selectors";
 import { useSessionStore } from "./hooks/useSessionStore";
