@@ -7,18 +7,16 @@ const ensure = () => {
   }
 };
 
-const encode = (value) => encodeURIComponent(String(value));
-
-const cmd = async (...args) => {
+const pipeline = async (commands) => {
   ensure();
-  const commandPath = args.map(encode).join("/");
 
-  const res = await fetch(`${base}/${commandPath}`, {
+  const res = await fetch(`${base}/pipeline`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
+    body: JSON.stringify(commands),
   });
 
   if (!res.ok) {
@@ -27,9 +25,12 @@ const cmd = async (...args) => {
   }
 
   const data = await res.json();
-  if (data?.error) throw new Error(`Redis command error: ${data.error}`);
-  return data?.result;
+  const first = data?.[0];
+  if (first?.error) throw new Error(`Redis command error: ${first.error}`);
+  return first?.result;
 };
+
+const cmd = async (...args) => pipeline([args.map((v) => String(v))]);
 
 export const redis = {
   sadd: (key, value) => cmd("SADD", key, value),

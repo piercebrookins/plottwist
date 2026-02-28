@@ -31,18 +31,21 @@ export const useSessionStore = (roomCode) => {
   const actions = useMemo(
     () => ({
       async update(nextSession) {
-        if (!nextSession?.roomCode) return;
+        if (!nextSession?.roomCode) return null;
 
-        const expectedUpdatedAt = session?.updatedAt || 0;
+        const expectedUpdatedAt = Number(nextSession.updatedAt || session?.updatedAt || 0);
 
         try {
           const { session: saved } = await apiUpdateRoomSession({
             session: nextSession,
             expectedUpdatedAt,
           });
-          setSession(saved || nextSession);
+          const persisted = saved || nextSession;
+          setSession(persisted);
+          return persisted;
         } catch {
           await refresh();
+          return null;
         }
       },
     }),

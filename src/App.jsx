@@ -138,14 +138,14 @@ function App() {
       pushGenerationLog({ event: "round-generation-start", roomCode: session.roomCode, roundId, mediaMode: session.settings.mediaMode });
 
       const closed = closeSubmissions(session);
-      await update(closed);
+      const savedClosed = (await update(closed)) || closed;
 
-      const r = currentRound(closed);
+      const r = currentRound(savedClosed);
       pushGenerationLog({
         event: "submissions-ready",
         count: r.submissions.length,
-        mediaMode: closed.settings.mediaMode,
-        revealStyle: closed.settings.revealStyle,
+        mediaMode: savedClosed.settings.mediaMode,
+        revealStyle: savedClosed.settings.revealStyle,
       });
 
       const generated = await Promise.all(
@@ -157,9 +157,9 @@ function App() {
             const ai = await generateScene({
               prompt: r.prompt,
               twist: submission.text,
-              memory: closed.memory,
-              style: closed.settings.revealStyle,
-              mediaMode: closed.settings.mediaMode,
+              memory: savedClosed.memory,
+              style: savedClosed.settings.revealStyle,
+              mediaMode: savedClosed.settings.mediaMode,
             });
 
             pushGenerationLog({
@@ -181,7 +181,17 @@ function App() {
       );
 
       pushGenerationLog({ event: "round-generation-complete", generated: generated.length });
-      await update(withGeneratedScenes(closed, generated));
+      const voteReady = withGeneratedScenes(savedClosed, generated);
+      const persistedVote = await update(voteReady);
+      if (!persistedVote || persistedVote.status !== GAME_STAGES.VOTE) {
+        pushGenerationLog({
+          event: "stage-transition-failed",
+          expected: GAME_STAGES.VOTE,
+          actual: persistedVote?.status || "unknown",
+        });
+      } else {
+        pushGenerationLog({ event: "stage-transition-ok", status: persistedVote.status });
+      }
     } finally {
       generatingRoundRef.current = null;
     }

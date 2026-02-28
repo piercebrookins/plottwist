@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { GAME_LIMITS } from "../game/constants";
-import { pickDemoVideo } from "../game/videoMock";
-import { pickDemoImage } from "../game/imageMock";
-import { pickPlaceholderMedia } from "../game/placeholderMock";
 import { Screen, StatPill } from "./Layout";
 
 export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
@@ -116,21 +113,7 @@ export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
         {mine ? (
           <>
             <p className="ok">Submitted: {mine.text}</p>
-            <div className="video-wrap">
-              {session.settings.mediaMode === "video" ? (
-                <video className="scene-video" src={pickDemoVideo(mine.text)} controls muted playsInline />
-              ) : (
-                <img
-                  className="scene-image"
-                  src={
-                    session.settings.mediaMode === "placeholder"
-                      ? pickPlaceholderMedia(mine.text).mediaUrl
-                      : pickDemoImage(mine.text)
-                  }
-                  alt={session.settings.mediaMode === "placeholder" ? "Placeholder still" : "Demo generated still"}
-                />
-              )}
-            </div>
+            <p>Nice. Sit tight while the host finishes collecting twists.</p>
           </>
         ) : (
           <p>Submit from your phone, then watch the host screen for reveals.</p>
