@@ -19,7 +19,7 @@ import {
 } from "./game/engine";
 import { GAME_STAGES } from "./game/constants";
 import { generateContinuationPrompt, generateScene } from "./game/geminiReal";
-import { loadSession, saveSession } from "./game/storage";
+import { apiCreateRoom, apiJoinRoom } from "./game/roomApi";
 import { currentRound, playerById } from "./game/selectors";
 import { useSessionStore } from "./hooks/useSessionStore";
 import { LandingView } from "./components/LandingView";
@@ -80,33 +80,36 @@ function App() {
     setPlayerId(null);
   }, [session, playerId]);
 
-  const createRoom = (hostName) => {
-    const next = createSession(hostName);
-    const nextPlayerId = next.players[0].id;
-
-    saveSession(next);
-    saveIdentityForTab({ roomCode: next.roomCode, playerId: nextPlayerId });
-
-    setRoomCode(next.roomCode);
-    setPlayerId(nextPlayerId);
+  const createRoom = async (hostName) => {
+    try {
+      const { session: next, playerId: nextPlayerId } = await apiCreateRoom(hostName);
+      saveIdentityForTab({ roomCode: next.roomCode, playerId: nextPlayerId });
+      setRoomCode(next.roomCode);
+      setPlayerId(nextPlayerId);
+    } catch (error) {
+      alert(error.message || "Failed to create room");
+    }
   };
 
-  const joinRoom = (code, name) => {
-    const existing = loadSession(code);
-    if (!existing) return alert("Room not found or expired");
+  const joinRoom = async (code, name) => {
+    try {
+      const { session: joined, playerId: nextPlayerId } = await apiJoinRoom({
+        roomCode: code,
+        name: name || "Player",
+      });
 
-    const joined = addPlayer(existing, name || "Player");
-    const mePlayer = joined.players.find((p) => p.name.toLowerCase() === (name || "Player").toLowerCase());
-    const nextPlayerId = mePlayer?.id || joined.players.at(-1).id;
-
-    saveSession(joined);
-    saveIdentityForTab({ roomCode: joined.roomCode, playerId: nextPlayerId });
-
-    setRoomCode(joined.roomCode);
-    setPlayerId(nextPlayerId);
+      saveIdentityForTab({ roomCode: joined.roomCode, playerId: nextPlayerId });
+      setRoomCode(joined.roomCode);
+      setPlayerId(nextPlayerId);
+    } catch (error) {
+      alert(error.message || "Room not found or expired");
+    }
   };
 
-  const apply = (fn) => session && update(fn(session));
+  const apply = async (fn) => {
+    if (!session) return;
+    await update(fn(session));
+  };
 
   const startGame = () => apply((s) => beginRound(setStage(s, GAME_STAGES.PROMPT)));
 
