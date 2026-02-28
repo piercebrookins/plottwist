@@ -76,7 +76,7 @@ export const LobbyView = ({ session, me, onAddBot, onStart, onSetSettings }) => 
                 value={session.settings.rounds}
                 onChange={(e) => onSetSettings({ rounds: Number(e.target.value) })}
               >
-                {[3, 4, 5].map((n) => (
+                {[2, 3, 4, 5].map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>

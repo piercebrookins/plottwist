@@ -40,7 +40,7 @@ export const generateContinuationPrompt = async ({
   const lens = lensByProblem[problemStatement] || lensByProblem.film;
   const twist = normalizeTwistPhrase(winningTwist);
   const basePrompt = String(roundOnePrompt || "the original setup").trim();
-  const draft = `Round 2: Build the next scene ${lens}. Continue from "${basePrompt}" and escalate the winning twist "${twist}" into a bigger, unexpected consequence.`;
+  const draft = `Build the next scene ${lens}. Continue from "${basePrompt}" and escalate the winning twist "${twist}" into a bigger, unexpected consequence.`;
   return oneSentence(draft);
 };
 

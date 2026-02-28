@@ -229,21 +229,18 @@ function App() {
   const goNextRound = async () => {
     if (!session || !me?.isHost) return;
 
-    const roundsPlayed = session.roundIndex;
-    if (roundsPlayed !== 1) {
-      apply((s) => nextRoundOrFinal(s));
-      return;
-    }
+    const justFinishedRound = session.rounds.at(-1);
+    const winner = justFinishedRound?.submissions?.find(
+      (s) => s.id === justFinishedRound?.winnerSubmissionId
+    );
 
-    const roundOne = session.rounds[0];
-    const winner = roundOne?.submissions?.find((s) => s.id === roundOne?.winnerSubmissionId);
-    if (!roundOne || !winner) {
+    if (!justFinishedRound || !winner) {
       apply((s) => nextRoundOrFinal(s));
       return;
     }
 
     const prompt = await generateContinuationPrompt({
-      roundOnePrompt: roundOne.prompt,
+      roundOnePrompt: justFinishedRound.prompt,
       winningTwist: winner.text,
       problemStatement: session.settings.problemStatement,
     });
