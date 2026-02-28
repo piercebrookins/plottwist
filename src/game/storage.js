@@ -31,6 +31,28 @@ export const loadSession = (roomCode) => {
   return record.session;
 };
 
+export const loadMostRecentSession = () => {
+  const all = readRaw();
+  const records = Object.values(all)
+    .filter((record) => record && typeof record === "object" && record.session && record.touchedAt)
+    .sort((a, b) => (b.touchedAt || 0) - (a.touchedAt || 0));
+
+  const latest = records[0];
+  if (!latest) {
+    return null;
+  }
+
+  if (Date.now() - latest.touchedAt > TTL_MS) {
+    if (latest.session?.roomCode) {
+      delete all[latest.session.roomCode];
+      writeRaw(all);
+    }
+    return null;
+  }
+
+  return latest.session;
+};
+
 export const syncListener = (callback) => {
   const handler = (event) => {
     if (event.key === STORAGE_KEY) callback();

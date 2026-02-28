@@ -45,6 +45,20 @@ vercel
 
 Set project framework to **Vite** when prompted.
 
+## Lobby telemetry API (for Mentra G1)
+
+This repo now includes serverless endpoints:
+- `POST /api/lobbies/heartbeat`
+- `GET /api/lobbies/most-active`
+- `GET /api/lobbies/top?limit=3`
+- `GET /api/lobbies/g1-widget` (compact glasses payload)
+
+Set these environment variables in Vercel Project Settings:
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+Host client sends heartbeat every 5s + on state updates.
+
 ## What’s implemented
 
 - ✅ Room creation and join with 4-char room code

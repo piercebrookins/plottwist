@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addPlayer,
   advanceRevealCursor,
@@ -19,7 +19,7 @@ import {
 } from "./game/engine";
 import { GAME_STAGES } from "./game/constants";
 import { generateContinuationPrompt, generateScene } from "./game/geminiMock";
-import { loadSession, saveSession } from "./game/storage";
+import { loadMostRecentSession, loadSession, saveSession } from "./game/storage";
 import { currentRound, playerById } from "./game/selectors";
 import { useSessionStore } from "./hooks/useSessionStore";
 import { LandingView } from "./components/LandingView";
@@ -30,17 +30,52 @@ import { RevealView } from "./components/RevealView";
 import { VoteView } from "./components/VoteView";
 import { RoundResultView } from "./components/RoundResultView";
 import { FinalResultView } from "./components/FinalResultView";
+import { publishMentraStatus } from "./mentraBridge";
+import { sendLobbyHeartbeat } from "./game/telemetry";
 
 const BOT_NAMES = ["Pixel", "NoirNerd", "Captain Twist", "Glue Gun", "Soda Gremlin"];
 
 function App() {
-  const [roomCode, setRoomCode] = useState(null);
-  const [playerId, setPlayerId] = useState(null);
+  const [roomCode, setRoomCode] = useState(() => loadMostRecentSession()?.roomCode || null);
+  const [playerId, setPlayerId] = useState(() => {
+    const latest = loadMostRecentSession();
+    if (!latest?.players?.length) {
+      return null;
+    }
+
+    const host = latest.players.find((p) => p.isHost);
+    return host?.id || latest.players[0]?.id || null;
+  });
   const { session, update } = useSessionStore(roomCode);
   const generatingRoundRef = useRef(null);
 
   const me = useMemo(() => playerById(session, playerId), [session, playerId]);
   const round = currentRound(session);
+
+  useEffect(() => {
+    if (!session || !roomCode) return;
+    publishMentraStatus({ session, playerId });
+  }, [session, roomCode, playerId]);
+
+  useEffect(() => {
+    if (!session || !roomCode) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      publishMentraStatus({ session, playerId });
+    }, 2000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [session, roomCode, playerId]);
+
+  useEffect(() => {
+    if (!session || !me?.isHost) return undefined;
+
+    sendLobbyHeartbeat(session);
+    const intervalId = window.setInterval(() => sendLobbyHeartbeat(session), 5000);
+    return () => window.clearInterval(intervalId);
+  }, [session, me?.isHost]);
 
   const createRoom = (hostName) => {
     const next = createSession(hostName);
