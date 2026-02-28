@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS = {
   revealStyle: "dramatic narration",
   memoryLimit: 5,
   tieMode: "split",
-  promptPack: "noir",
+  promptPack: "quiplash",
   problemStatement: "film",
   mediaMode: "video",
 };

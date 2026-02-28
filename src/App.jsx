@@ -40,14 +40,52 @@ function App() {
   const [roomCode, setRoomCode] = useState(() => getIdentityForTab().roomCode || null);
   const [playerId, setPlayerId] = useState(() => getIdentityForTab().playerId || null);
   const [generationLogs, setGenerationLogs] = useState([]);
+  const [showRawGenerationLogs, setShowRawGenerationLogs] = useState(() => {
+    try {
+      return window.localStorage.getItem("plottwist:raw-generation-logs") === "1";
+    } catch {
+      return false;
+    }
+  });
   const { session, update } = useSessionStore(roomCode);
   const generatingRoundRef = useRef(null);
 
+  const formatGenerationLog = (entry) => {
+    if (typeof entry === "string") return entry;
+    if (!entry || typeof entry !== "object") return String(entry);
+
+    const { event } = entry;
+
+    switch (event) {
+      case "round-generation-start":
+        return `🎬 Cameras rolling in room ${entry.roomCode}. Chaos engine warmed up for ${entry.mediaMode} mode.`;
+      case "submissions-ready":
+        return `📬 ${entry.count} twists collected. The nonsense buffet is officially open.`;
+      case "submission-start":
+        return `🧪 Brewing scene ${entry.index}... twist ingredient: "${entry.twist}".`;
+      case "media-offload-start":
+        return `📦 Compressing pixels for scene ${entry.index}. Courier pigeons dispatched.`;
+      case "media-offload-done":
+        return `✅ Scene ${entry.index} safely tucked into storage. No pixels were harmed.`;
+      case "submission-done":
+        return `✨ Scene ${entry.index} done in ${entry.ms}ms via ${entry.provider}${entry.fallback ? " (fallback rescue squad)" : ""}.`;
+      case "submission-error":
+        return `💥 Scene ${entry.index} tripped on a banana peel: ${entry.message}`;
+      case "round-generation-complete":
+        return `🏁 All ${entry.generated} scenes generated. Releasing the cinematic gremlins.`;
+      case "stage-transition-ok":
+        return `🚪 Transition successful. Voting arena is now open.`;
+      case "stage-transition-failed":
+        return `🚨 Transition jammed (${entry.actual || "unknown"}). Kicking the server gently.`;
+      default:
+        return JSON.stringify(entry);
+    }
+  };
+
   const pushGenerationLog = (entry) => {
-    const text = typeof entry === "string" ? entry : JSON.stringify(entry);
-    const line = `${new Date().toLocaleTimeString()} · ${text}`;
-    setGenerationLogs((prev) => [...prev.slice(-15), line]);
-    console.log("[generation]", text);
+    const logEntry = { ts: Date.now(), entry };
+    setGenerationLogs((prev) => [...prev.slice(-15), logEntry]);
+    console.log("[generation]", entry);
   };
 
   const me = useMemo(() => playerById(session, playerId), [session, playerId]);
@@ -311,13 +349,40 @@ function App() {
         <div>
           <div>Generating cinematic chaos…</div>
           <div className="card" style={{ marginTop: 12, textAlign: "left", maxWidth: 780 }}>
-            <h3 style={{ marginTop: 0 }}>Generation debug</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <h3 style={{ marginTop: 0 }}>Generation debug</h3>
+              {me?.isHost ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !showRawGenerationLogs;
+                    setShowRawGenerationLogs(next);
+                    try {
+                      window.localStorage.setItem("plottwist:raw-generation-logs", next ? "1" : "0");
+                    } catch {
+                      // no-op
+                    }
+                  }}
+                >
+                  {showRawGenerationLogs ? "Witty mode" : "Raw JSON mode"}
+                </button>
+              ) : null}
+            </div>
             <ul className="clean-list">
-              {(generationLogs.length ? generationLogs : ["Waiting for generation logs…"]).map((line, idx) => (
-                <li key={`${idx}-${line}`} style={{ fontFamily: "monospace", fontSize: 12, opacity: 0.92 }}>
-                  {line}
-                </li>
-              ))}
+              {(generationLogs.length ? generationLogs : [{ ts: Date.now(), entry: "Waiting for generation logs…" }]).map((item, idx) => {
+                const time = new Date(item.ts).toLocaleTimeString();
+                const text = showRawGenerationLogs
+                  ? typeof item.entry === "string"
+                    ? item.entry
+                    : JSON.stringify(item.entry)
+                  : formatGenerationLog(item.entry);
+
+                return (
+                  <li key={`${idx}-${time}-${text}`} style={{ fontFamily: "monospace", fontSize: 12, opacity: 0.92 }}>
+                    {`${time} · ${text}`}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
