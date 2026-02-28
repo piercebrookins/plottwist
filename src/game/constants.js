@@ -33,6 +33,12 @@ export const PROMPT_PACKS = {
   ],
 };
 
+export const HACKATHON_PROBLEM_STATEMENTS = {
+  music: "Gemini and Music",
+  film: "Gemini and Film",
+  gaming: "Gemini and Gaming",
+};
+
 export const DEFAULT_SETTINGS = {
   rounds: 3,
   submitSeconds: 30,
@@ -41,6 +47,7 @@ export const DEFAULT_SETTINGS = {
   memoryLimit: 5,
   tieMode: "split",
   promptPack: "noir",
+  problemStatement: "film",
 };
 
 export const FALLBACK_TWIST = "No twist submitted";

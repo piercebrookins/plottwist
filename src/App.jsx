@@ -18,7 +18,7 @@ import {
   withVote,
 } from "./game/engine";
 import { GAME_STAGES } from "./game/constants";
-import { generateScene } from "./game/geminiMock";
+import { generateContinuationPrompt, generateScene } from "./game/geminiMock";
 import { loadSession, saveSession } from "./game/storage";
 import { currentRound, playerById } from "./game/selectors";
 import { useSessionStore } from "./hooks/useSessionStore";
@@ -102,7 +102,30 @@ function App() {
   const nextShowcaseClip = () => apply((s) => advanceVoteShowcase(s));
   const startVoting = () => apply((s) => openVotingPhase(s));
 
-  const goNextRound = () => apply((s) => nextRoundOrFinal(s));
+  const goNextRound = async () => {
+    if (!session || !me?.isHost) return;
+
+    const roundsPlayed = session.roundIndex;
+    if (roundsPlayed !== 1) {
+      apply((s) => nextRoundOrFinal(s));
+      return;
+    }
+
+    const roundOne = session.rounds[0];
+    const winner = roundOne?.submissions?.find((s) => s.id === roundOne?.winnerSubmissionId);
+    if (!roundOne || !winner) {
+      apply((s) => nextRoundOrFinal(s));
+      return;
+    }
+
+    const prompt = await generateContinuationPrompt({
+      roundOnePrompt: roundOne.prompt,
+      winningTwist: winner.text,
+      problemStatement: session.settings.problemStatement,
+    });
+
+    apply((s) => nextRoundOrFinal(s, prompt));
+  };
 
   const addMockPlayer = () => {
     const name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + Math.floor(Math.random() * 9);
@@ -166,7 +189,15 @@ function App() {
   }
 
   if (session.status === GAME_STAGES.ROUND_RESULT && round) {
-    return <RoundResultView session={session} round={round} onNextRound={goNextRound} />;
+    return (
+      <RoundResultView
+        session={session}
+        round={round}
+        onNextRound={() => {
+          if (me?.isHost) goNextRound();
+        }}
+      />
+    );
   }
 
   return <FinalResultView session={session} onReset={playAgain} />;

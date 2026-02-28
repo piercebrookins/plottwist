@@ -85,27 +85,32 @@ export const buildRoundPrompt = (session) => {
   return `${seedPrompt} (Callback memory: ${callback})`;
 };
 
+const makeRound = (session, prompt) => ({
+  id: uid(),
+  roundNumber: session.roundIndex + 1,
+  prompt,
+  status: GAME_STAGES.PROMPT,
+  startedAt: Date.now(),
+  submissions: [],
+  votes: [],
+  revealCursor: 0,
+  winnerSubmissionId: null,
+  scoredAt: null,
+  votePhase: "showcase",
+  showcaseIndex: 0,
+  voteEndsAt: null,
+});
+
 export const beginRound = (session) => ({
   ...session,
   status: GAME_STAGES.PROMPT,
-  rounds: [
-    ...session.rounds,
-    {
-      id: uid(),
-      roundNumber: session.roundIndex + 1,
-      prompt: buildRoundPrompt(session),
-      status: GAME_STAGES.PROMPT,
-      startedAt: Date.now(),
-      submissions: [],
-      votes: [],
-      revealCursor: 0,
-      winnerSubmissionId: null,
-      scoredAt: null,
-      votePhase: "showcase",
-      showcaseIndex: 0,
-      voteEndsAt: null,
-    },
-  ],
+  rounds: [...session.rounds, makeRound(session, buildRoundPrompt(session))],
+});
+
+export const beginRoundWithPrompt = (session, prompt) => ({
+  ...session,
+  status: GAME_STAGES.PROMPT,
+  rounds: [...session.rounds, makeRound(session, prompt || buildRoundPrompt(session))],
 });
 
 export const withSubmission = (session, { playerId, text }) => {
@@ -252,6 +257,12 @@ export const closeVoting = (session) => {
   const round = session.rounds.at(-1);
   if (!round) return session;
 
+  const votes = getSubmissionVotes(round);
+  const ranked = [...round.submissions].sort(
+    (a, b) => (votes.get(b.id) || 0) - (votes.get(a.id) || 0)
+  );
+  const winner = ranked[0] || null;
+
   return {
     ...session,
     status: GAME_STAGES.REVEAL,
@@ -262,6 +273,7 @@ export const closeVoting = (session) => {
         status: GAME_STAGES.REVEAL,
         revealCursor: 0,
         votePhase: "closed",
+        winnerSubmissionId: winner?.id || null,
       },
     ],
   };
@@ -271,9 +283,9 @@ export const advanceRevealCursor = (session) => {
   const round = session.rounds.at(-1);
   if (!round) return session;
 
-  const nextCursor = Math.min(round.revealCursor + 1, round.submissions.length);
-  const nextStage =
-    nextCursor >= round.submissions.length ? GAME_STAGES.ROUND_RESULT : GAME_STAGES.REVEAL;
+  const maxRevealCount = round.winnerSubmissionId ? 1 : round.submissions.length;
+  const nextCursor = Math.min(round.revealCursor + 1, maxRevealCount);
+  const nextStage = nextCursor >= maxRevealCount ? GAME_STAGES.ROUND_RESULT : GAME_STAGES.REVEAL;
 
   return {
     ...session,
@@ -376,9 +388,11 @@ export const completeRound = (session) => {
 export const sortedLeaderboard = (session) =>
   [...session.players].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
-export const nextRoundOrFinal = (session) => {
+export const nextRoundOrFinal = (session, explicitPrompt = null) => {
   if (session.status === GAME_STAGES.FINAL_RESULT) return session;
-  return beginRound(setStage(session, GAME_STAGES.PROMPT));
+  return explicitPrompt
+    ? beginRoundWithPrompt(setStage(session, GAME_STAGES.PROMPT), explicitPrompt)
+    : beginRound(setStage(session, GAME_STAGES.PROMPT));
 };
 
 export const resetGame = (session) => ({

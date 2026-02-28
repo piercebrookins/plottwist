@@ -7,6 +7,33 @@ const hasProfanity = (text) =>
 
 const blocked = (text) => hasProfanity(text);
 
+const oneSentence = (text) => {
+  const clean = text.replace(/\n+/g, " ").trim();
+  const first = clean.match(/[^.!?]+[.!?]?/);
+  const sentence = (first?.[0] || clean).trim();
+  return sentence.endsWith(".") || sentence.endsWith("!") || sentence.endsWith("?")
+    ? sentence
+    : `${sentence}.`;
+};
+
+export const generateContinuationPrompt = async ({
+  roundOnePrompt,
+  winningTwist,
+  problemStatement,
+}) => {
+  await new Promise((r) => setTimeout(r, 250 + Math.random() * 500));
+
+  const lensByProblem = {
+    music: "as a music-driven interactive beat drop",
+    film: "as a non-linear cinematic escalation",
+    gaming: "as a persistent game-world consequence",
+  };
+
+  const lens = lensByProblem[problemStatement] || lensByProblem.film;
+  const draft = `After ${winningTwist}, what happens next ${lens} from: ${roundOnePrompt}`;
+  return oneSentence(draft);
+};
+
 export const generateScene = async ({ prompt, twist, memory, style }) => {
   const timedOut = Math.random() < 0.08;
 
