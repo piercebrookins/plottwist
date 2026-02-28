@@ -50,6 +50,17 @@ function App() {
   const { session, update } = useSessionStore(roomCode);
   const generatingRoundRef = useRef(null);
 
+  const sanitizeGenerationLogEntry = (entry) => {
+    if (!entry || typeof entry !== "object") return entry;
+
+    const redacted = { ...entry };
+    if ("roomCode" in redacted) redacted.roomCode = "[redacted]";
+    if ("playerId" in redacted) redacted.playerId = "[redacted]";
+    if ("twist" in redacted) redacted.twist = "[hidden to prevent bias]";
+    if ("mediaId" in redacted) redacted.mediaId = "[redacted]";
+    return redacted;
+  };
+
   const formatGenerationLog = (entry) => {
     if (typeof entry === "string") return entry;
     if (!entry || typeof entry !== "object") return String(entry);
@@ -58,11 +69,11 @@ function App() {
 
     switch (event) {
       case "round-generation-start":
-        return `🎬 Cameras rolling in room ${entry.roomCode}. Chaos engine warmed up for ${entry.mediaMode} mode.`;
+        return `🎬 Cameras rolling. Chaos engine warmed up for ${entry.mediaMode} mode.`;
       case "submissions-ready":
         return `📬 ${entry.count} twists collected. The nonsense buffet is officially open.`;
       case "submission-start":
-        return `🧪 Brewing scene ${entry.index}... twist ingredient: "${entry.twist}".`;
+        return `🧪 Brewing scene ${entry.index}... secret twist safely hidden to avoid bias.`;
       case "media-offload-start":
         return `📦 Compressing pixels for scene ${entry.index}. Courier pigeons dispatched.`;
       case "media-offload-done":
@@ -78,12 +89,12 @@ function App() {
       case "stage-transition-failed":
         return `🚨 Transition jammed (${entry.actual || "unknown"}). Kicking the server gently.`;
       default:
-        return JSON.stringify(entry);
+        return JSON.stringify(sanitizeGenerationLogEntry(entry));
     }
   };
 
   const pushGenerationLog = (entry) => {
-    const logEntry = { ts: Date.now(), entry };
+    const logEntry = { ts: Date.now(), entry: sanitizeGenerationLogEntry(entry) };
     setGenerationLogs((prev) => [...prev.slice(-15), logEntry]);
     console.log("[generation]", entry);
   };
