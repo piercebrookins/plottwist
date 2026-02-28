@@ -10,12 +10,11 @@ const hasProfanity = (text) =>
 const blocked = (text) => hasProfanity(text);
 
 const oneSentence = (text) => {
-  const clean = text.replace(/\n+/g, " ").trim();
-  const first = clean.match(/[^.!?]+[.!?]?/);
-  const sentence = (first?.[0] || clean).trim();
-  return sentence.endsWith(".") || sentence.endsWith("!") || sentence.endsWith("?")
-    ? sentence
-    : `${sentence}.`;
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  return clean.endsWith(".") || clean.endsWith("!") || clean.endsWith("?")
+    ? clean
+    : `${clean}.`;
 };
 
 const normalizeTwistPhrase = (text) => {
@@ -40,7 +39,7 @@ export const generateContinuationPrompt = async ({
   const lens = lensByProblem[problemStatement] || lensByProblem.film;
   const twist = normalizeTwistPhrase(winningTwist);
   const basePrompt = String(roundOnePrompt || "the original setup").trim();
-  const draft = `Build the next scene ${lens}. Continue from "${basePrompt}" and escalate the winning twist "${twist}" into a bigger, unexpected consequence.`;
+  const draft = `Continue from "${basePrompt}" and escalate the winning twist "${twist}" into a bigger, unexpected consequence ${lens}.`;
   return oneSentence(draft);
 };
 
