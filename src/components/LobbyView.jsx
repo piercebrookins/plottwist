@@ -96,6 +96,7 @@ export const LobbyView = ({ session, me, onAddBot, onStart, onSetSettings }) => 
             >
               <option value="video">Video mode</option>
               <option value="image">Image mode</option>
+              <option value="placeholder">Placeholder mode</option>
             </select>
           </label>
         </div>

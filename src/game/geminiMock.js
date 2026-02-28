@@ -1,5 +1,6 @@
 import { pickDemoVideo } from "./videoMock";
 import { pickDemoImage } from "./imageMock";
+import { pickPlaceholderMedia } from "./placeholderMock";
 
 const PROFANITY = ["damn", "hell", "shit", "fuck"];
 
@@ -39,6 +40,21 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
   const timedOut = Math.random() < 0.08;
 
   await new Promise((r) => setTimeout(r, 350 + Math.random() * 700));
+
+  if (mediaMode === "placeholder") {
+    const placeholder = pickPlaceholderMedia(twist || prompt);
+    return {
+      safetyStatus: "safe",
+      generatedScene: `${placeholder.generatedScene} Prompt: ${prompt} Twist: ${twist}.`,
+      usedMemory: false,
+      fallback: true,
+      mediaType: placeholder.mediaType,
+      mediaUrl: placeholder.mediaUrl,
+      mediaProvider: placeholder.mediaProvider,
+      imageUrl: placeholder.mediaUrl,
+      videoUrl: null,
+    };
+  }
 
   if (blocked(twist)) {
     const mediaUrl = mediaMode === "image" ? pickDemoImage("safe fallback") : pickDemoVideo("safe fallback");
