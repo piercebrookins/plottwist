@@ -19,7 +19,7 @@ import {
 } from "./game/engine";
 import { GAME_STAGES } from "./game/constants";
 import { generateContinuationPrompt, generateScene } from "./game/geminiReal";
-import { apiCreateRoom, apiJoinRoom } from "./game/roomApi";
+import { apiCreateRoom, apiJoinRoom, apiSaveRoomMedia } from "./game/roomApi";
 import { currentRound, playerById } from "./game/selectors";
 import { useSessionStore } from "./hooks/useSessionStore";
 import { LandingView } from "./components/LandingView";
@@ -162,17 +162,40 @@ function App() {
               mediaMode: savedClosed.settings.mediaMode,
             });
 
+            const normalized = { ...submission, ...ai };
+            const isLargeDataUrl =
+              normalized.mediaType === "image" &&
+              typeof normalized.mediaUrl === "string" &&
+              normalized.mediaUrl.startsWith("data:");
+
+            if (isLargeDataUrl) {
+              const mediaId = normalized.id;
+              const mimeType = normalized.mediaUrl.slice(5, normalized.mediaUrl.indexOf(";")) || "image/png";
+
+              pushGenerationLog({ event: "media-offload-start", index: idx + 1, mediaId });
+              const { mediaUrl } = await apiSaveRoomMedia({
+                roomCode: savedClosed.roomCode,
+                mediaId,
+                dataUrl: normalized.mediaUrl,
+                mimeType,
+              });
+
+              normalized.mediaUrl = mediaUrl;
+              normalized.imageUrl = mediaUrl;
+              pushGenerationLog({ event: "media-offload-done", index: idx + 1, mediaId });
+            }
+
             pushGenerationLog({
               event: "submission-done",
               index: idx + 1,
               ms: Math.round(performance.now() - startedAt),
-              mediaType: ai.mediaType,
-              provider: ai.mediaProvider,
-              fallback: ai.fallback,
-              safetyStatus: ai.safetyStatus,
+              mediaType: normalized.mediaType,
+              provider: normalized.mediaProvider,
+              fallback: normalized.fallback,
+              safetyStatus: normalized.safetyStatus,
             });
 
-            return { ...submission, ...ai };
+            return normalized;
           } catch (error) {
             pushGenerationLog({ event: "submission-error", index: idx + 1, message: error.message });
             throw error;

@@ -40,3 +40,12 @@ export const apiUpdateRoomSession = async ({ session, expectedUpdatedAt }) => {
   });
   return parse(res);
 };
+
+export const apiSaveRoomMedia = async ({ roomCode, mediaId, dataUrl, mimeType }) => {
+  const res = await fetch("/api/rooms/media-save", {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ roomCode, mediaId, dataUrl, mimeType }),
+  });
+  return parse(res);
+};

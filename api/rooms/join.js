@@ -1,5 +1,6 @@
 import { allowOptions, cors, json, readBody } from "../_lib/http.js";
 import { loadRoomSession, saveRoomSession } from "../_lib/roomStore.js";
+import { createLogger } from "../_lib/vercelLog.js";
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -7,7 +8,7 @@ const AVATARS = ["😎", "🤓", "🤪", "😈", "👽", "👻", "🦄", "🍕",
 const PLAYER_COLORS = ["#4ADE80", "#60A5FA", "#F472B6", "#A78BFA", "#FB923C", "#F87171", "#2DD4BF", "#FACC15"];
 
 export default async function handler(req, res) {
-  const trace = `[rooms/join ${Date.now()}]`;
+  const logger = createLogger("rooms/join");
   if (allowOptions(req, res)) return;
   cors(res);
   if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
@@ -16,22 +17,22 @@ export default async function handler(req, res) {
     const body = await readBody(req);
     const roomCode = String(body.roomCode || "").toUpperCase();
     const name = String(body.name || "Player").trim().slice(0, 20) || "Player";
-    console.log(trace, "request", { roomCode, name });
+    logger.info("request", { roomCode, name });
 
     const session = await loadRoomSession(roomCode);
     if (!session) {
-      console.warn(trace, "room-missing", { roomCode });
+      logger.warn("room-missing", { roomCode });
       return json(res, 404, { error: "Room not found" });
     }
 
     const existingName = session.players.find((p) => p.name.toLowerCase() === name.toLowerCase());
     if (existingName) {
-      console.log(trace, "existing-player", { roomCode, playerId: existingName.id });
+      logger.info("existing-player", { roomCode, playerId: existingName.id });
       return json(res, 200, { session, playerId: existingName.id });
     }
 
     if ((session.players?.length || 0) >= 10) {
-      console.warn(trace, "room-full", { roomCode, playerCount: session.players?.length || 0 });
+      logger.warn("room-full", { roomCode, playerCount: session.players?.length || 0 });
       return json(res, 400, { error: "Room is full" });
     }
 
@@ -50,10 +51,10 @@ export default async function handler(req, res) {
 
     const next = { ...session, players: [...session.players, player] };
     const saved = await saveRoomSession(next);
-    console.log(trace, "joined", { roomCode: saved.roomCode, playerId: player.id });
+    logger.info("joined", { roomCode: saved.roomCode, playerId: player.id });
     return json(res, 200, { session: saved, playerId: player.id });
   } catch (error) {
-    console.error(trace, "error", { message: error.message, stack: error.stack });
+    logger.error("error", { message: error.message, stack: error.stack });
     return json(res, 500, { error: error.message || "Internal error" });
   }
 }

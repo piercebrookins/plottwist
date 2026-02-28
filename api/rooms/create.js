@@ -1,5 +1,6 @@
 import { allowOptions, cors, json, readBody } from "../_lib/http.js";
 import { saveRoomSession } from "../_lib/roomStore.js";
+import { createLogger } from "../_lib/vercelLog.js";
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const roomCode = () => Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -20,7 +21,7 @@ const DEFAULT_SETTINGS = {
 };
 
 export default async function handler(req, res) {
-  const trace = `[rooms/create ${Date.now()}]`;
+  const logger = createLogger("rooms/create");
   if (allowOptions(req, res)) return;
   cors(res);
   if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
@@ -28,7 +29,7 @@ export default async function handler(req, res) {
   try {
     const body = await readBody(req);
     const hostName = String(body.hostName || "Host").trim().slice(0, 20) || "Host";
-    console.log(trace, "request", { hostName });
+    logger.info("request", { hostName });
 
     const hostPlayer = {
       id: uid(),
@@ -55,10 +56,10 @@ export default async function handler(req, res) {
     };
 
     const saved = await saveRoomSession(session);
-    console.log(trace, "created", { roomCode: saved.roomCode, hostPlayerId: hostPlayer.id });
+    logger.info("created", { roomCode: saved.roomCode, hostPlayerId: hostPlayer.id });
     return json(res, 200, { session: saved, playerId: hostPlayer.id });
   } catch (error) {
-    console.error(trace, "error", { message: error.message, stack: error.stack });
+    logger.error("error", { message: error.message, stack: error.stack });
     return json(res, 500, { error: error.message || "Internal error" });
   }
 }
