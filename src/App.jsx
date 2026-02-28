@@ -19,7 +19,7 @@ import {
 } from "./game/engine";
 import { GAME_STAGES } from "./game/constants";
 import { generateContinuationPrompt, generateScene } from "./game/geminiReal";
-import { loadMostRecentSession, loadSession, saveSession } from "./game/storage";
+import { loadSession, saveSession } from "./game/storage";
 import { currentRound, playerById } from "./game/selectors";
 import { useSessionStore } from "./hooks/useSessionStore";
 import { LandingView } from "./components/LandingView";
@@ -32,20 +32,13 @@ import { RoundResultView } from "./components/RoundResultView";
 import { FinalResultView } from "./components/FinalResultView";
 import { publishMentraStatus } from "./mentraBridge";
 import { sendLobbyHeartbeat } from "./game/telemetry";
+import { clearIdentityForTab, getIdentityForTab, saveIdentityForTab } from "./game/identity";
 
 const BOT_NAMES = ["Pixel", "NoirNerd", "Captain Twist", "Glue Gun", "Soda Gremlin"];
 
 function App() {
-  const [roomCode, setRoomCode] = useState(() => loadMostRecentSession()?.roomCode || null);
-  const [playerId, setPlayerId] = useState(() => {
-    const latest = loadMostRecentSession();
-    if (!latest?.players?.length) {
-      return null;
-    }
-
-    const host = latest.players.find((p) => p.isHost);
-    return host?.id || latest.players[0]?.id || null;
-  });
+  const [roomCode, setRoomCode] = useState(() => getIdentityForTab().roomCode || null);
+  const [playerId, setPlayerId] = useState(() => getIdentityForTab().playerId || null);
   const { session, update } = useSessionStore(roomCode);
   const generatingRoundRef = useRef(null);
 
@@ -77,21 +70,40 @@ function App() {
     return () => window.clearInterval(intervalId);
   }, [session, me?.isHost]);
 
+  useEffect(() => {
+    if (!session) return;
+    const stillExists = session.players.some((p) => p.id === playerId);
+    if (stillExists) return;
+
+    clearIdentityForTab();
+    setRoomCode(null);
+    setPlayerId(null);
+  }, [session, playerId]);
+
   const createRoom = (hostName) => {
     const next = createSession(hostName);
+    const nextPlayerId = next.players[0].id;
+
     saveSession(next);
+    saveIdentityForTab({ roomCode: next.roomCode, playerId: nextPlayerId });
+
     setRoomCode(next.roomCode);
-    setPlayerId(next.players[0].id);
+    setPlayerId(nextPlayerId);
   };
 
   const joinRoom = (code, name) => {
     const existing = loadSession(code);
     if (!existing) return alert("Room not found or expired");
+
     const joined = addPlayer(existing, name || "Player");
     const mePlayer = joined.players.find((p) => p.name.toLowerCase() === (name || "Player").toLowerCase());
+    const nextPlayerId = mePlayer?.id || joined.players.at(-1).id;
+
     saveSession(joined);
+    saveIdentityForTab({ roomCode: joined.roomCode, playerId: nextPlayerId });
+
     setRoomCode(joined.roomCode);
-    setPlayerId(mePlayer?.id || joined.players.at(-1).id);
+    setPlayerId(nextPlayerId);
   };
 
   const apply = (fn) => session && update(fn(session));
