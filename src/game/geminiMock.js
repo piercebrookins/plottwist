@@ -1,4 +1,5 @@
 import { pickDemoVideo } from "./videoMock";
+import { pickDemoImage } from "./imageMock";
 
 const PROFANITY = ["damn", "hell", "shit", "fuck"];
 
@@ -34,31 +35,39 @@ export const generateContinuationPrompt = async ({
   return oneSentence(draft);
 };
 
-export const generateScene = async ({ prompt, twist, memory, style }) => {
+export const generateScene = async ({ prompt, twist, memory, style, mediaMode = "video" }) => {
   const timedOut = Math.random() < 0.08;
 
   await new Promise((r) => setTimeout(r, 350 + Math.random() * 700));
 
   if (blocked(twist)) {
+    const mediaUrl = mediaMode === "image" ? pickDemoImage("safe fallback") : pickDemoVideo("safe fallback");
     return {
       safetyStatus: "blocked",
       generatedScene:
         "Content safety filter stepped in. The cameras cut to static, a dramatic gasp echoes, and the host quickly pivots to the next scene.",
       usedMemory: false,
       fallback: true,
-      videoUrl: pickDemoVideo("safe fallback"),
-      videoProvider: "veo3-mock",
+      mediaType: mediaMode,
+      mediaUrl,
+      mediaProvider: mediaMode === "image" ? "imagen-mock" : "veo3-mock",
+      videoUrl: mediaMode === "video" ? mediaUrl : null,
+      imageUrl: mediaMode === "image" ? mediaUrl : null,
     };
   }
 
   if (timedOut) {
+    const mediaUrl = mediaMode === "image" ? pickDemoImage(twist) : pickDemoVideo(twist);
     return {
       safetyStatus: "timeout",
       generatedScene: `In a sudden turn, ${twist}. The crowd gasps as this revelation reshapes the case in seconds.`,
       usedMemory: false,
       fallback: true,
-      videoUrl: pickDemoVideo(twist),
-      videoProvider: "veo3-mock",
+      mediaType: mediaMode,
+      mediaUrl,
+      mediaProvider: mediaMode === "image" ? "imagen-mock" : "veo3-mock",
+      videoUrl: mediaMode === "video" ? mediaUrl : null,
+      imageUrl: mediaMode === "image" ? mediaUrl : null,
     };
   }
 
@@ -74,12 +83,16 @@ export const generateScene = async ({ prompt, twist, memory, style }) => {
           usedMemory ? memoryText : ""
         }`;
 
+  const mediaUrl = mediaMode === "image" ? pickDemoImage(twist) : pickDemoVideo(twist);
   return {
     safetyStatus: "safe",
     generatedScene: narration,
     usedMemory,
     fallback: false,
-    videoUrl: pickDemoVideo(twist),
-    videoProvider: "veo3-mock",
+    mediaType: mediaMode,
+    mediaUrl,
+    mediaProvider: mediaMode === "image" ? "imagen-mock" : "veo3-mock",
+    videoUrl: mediaMode === "video" ? mediaUrl : null,
+    imageUrl: mediaMode === "image" ? mediaUrl : null,
   };
 };

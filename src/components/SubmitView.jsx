@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GAME_LIMITS } from "../game/constants";
 import { pickDemoVideo } from "../game/videoMock";
+import { pickDemoImage } from "../game/imageMock";
 import { Screen, StatPill } from "./Layout";
 
 export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
@@ -115,8 +116,14 @@ export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
           <>
             <p className="ok">Submitted: {mine.text}</p>
             <div className="video-wrap">
-              <video className="scene-video" src={pickDemoVideo(mine.text)} controls muted playsInline />
-              <small>Demo Veo preview based on your twist</small>
+              {session.settings.mediaMode === "image" ? (
+                <img className="scene-image" src={pickDemoImage(mine.text)} alt="Demo generated still" />
+              ) : (
+                <video className="scene-video" src={pickDemoVideo(mine.text)} controls muted playsInline />
+              )}
+              <small>
+                Demo {session.settings.mediaMode === "image" ? "Imagen" : "Veo"} preview based on your twist
+              </small>
             </div>
           </>
         ) : (

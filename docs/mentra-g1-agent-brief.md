@@ -1,3 +1,5 @@
+
+
 # Mentra G1 Agent Brief — PlotTwist Active Lobby Telemetry
 
 Use this brief to implement a **read-only telemetry path** so Even Realities G1 / Mentra OS glasses can display the most active lobby from the deployed app:

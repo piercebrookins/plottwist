@@ -39,6 +39,11 @@ export const HACKATHON_PROBLEM_STATEMENTS = {
   gaming: "Gemini and Gaming",
 };
 
+export const MEDIA_MODES = {
+  VIDEO: "video",
+  IMAGE: "image",
+};
+
 export const DEFAULT_SETTINGS = {
   rounds: 3,
   submitSeconds: 30,
@@ -48,6 +53,7 @@ export const DEFAULT_SETTINGS = {
   tieMode: "split",
   promptPack: "noir",
   problemStatement: "film",
+  mediaMode: MEDIA_MODES.VIDEO,
 };
 
 export const FALLBACK_TWIST = "No twist submitted";

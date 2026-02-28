@@ -374,12 +374,14 @@ select {
   gap: 6px;
 }
 
-.scene-video {
+.scene-video,
+.scene-image {
   width: 100%;
   max-height: 320px;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
   background: #000;
+  object-fit: cover;
 }
 
 .vote-showcase {

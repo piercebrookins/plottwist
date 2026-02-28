@@ -38,4 +38,5 @@ export const redis = {
   get: (key) => cmd("GET", key),
   incr: (key) => cmd("INCR", key),
   expire: (key, ttl) => cmd("EXPIRE", key, ttl),
+  del: (...keys) => (keys.length ? cmd("DEL", ...keys) : 0),
 };

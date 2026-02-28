@@ -1,4 +1,4 @@
-import { HACKATHON_PROBLEM_STATEMENTS, MIN_PLAYERS } from "../game/constants";
+import { MIN_PLAYERS } from "../game/constants";
 import { Screen, StatPill } from "./Layout";
 
 export const LobbyView = ({ session, me, onAddBot, onStart, onSetSettings }) => {
@@ -89,14 +89,13 @@ export const LobbyView = ({ session, me, onAddBot, onStart, onSetSettings }) => 
             </select>
           </label>
           <label>
-            Hackathon lens
+            Media mode
             <select
-              value={session.settings.problemStatement}
-              onChange={(e) => onSetSettings({ problemStatement: e.target.value })}
+              value={session.settings.mediaMode || "video"}
+              onChange={(e) => onSetSettings({ mediaMode: e.target.value })}
             >
-              <option value="music">{HACKATHON_PROBLEM_STATEMENTS.music}</option>
-              <option value="film">{HACKATHON_PROBLEM_STATEMENTS.film}</option>
-              <option value="gaming">{HACKATHON_PROBLEM_STATEMENTS.gaming}</option>
+              <option value="video">Video mode</option>
+              <option value="image">Image mode</option>
             </select>
           </label>
         </div>

@@ -120,6 +120,7 @@ function App() {
             twist: submission.text,
             memory: closed.memory,
             style: closed.settings.revealStyle,
+            mediaMode: closed.settings.mediaMode,
           });
           return { ...submission, ...ai };
         })

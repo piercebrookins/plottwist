@@ -59,6 +59,18 @@ Set these environment variables in Vercel Project Settings:
 
 Host client sends heartbeat every 5s + on state updates.
 
+### Clear all games command
+
+```bash
+npm run clear:games
+```
+
+Optional custom target URL:
+
+```bash
+CLEAR_GAMES_BASE_URL=https://plottwist-nine.vercel.app npm run clear:games
+```
+
 ## What’s implemented
 
 - ✅ Room creation and join with 4-char room code
