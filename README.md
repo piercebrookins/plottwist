@@ -1,110 +1,187 @@
-# PlotTwist (React MVP)
+# PlotTwist
 
-A Quiplash-style party webapp for movie plot twists.
+A multiplayer party game where players write absurd plot twists and the app turns them into dramatic scene reveals (video, image, or placeholder mode).
 
-## Quick start
+Built with React + Vite, with serverless telemetry endpoints for live lobby monitoring (including Mentra / G1 display use cases).
+
+---
+
+## Features
+
+- Room-based multiplayer flow with short join codes
+- Host-controlled game settings
+- Round pipeline: prompt → write → generate → showcase → vote → reveal → scores
+- Three media output modes:
+  - `video`
+  - `image`
+  - `placeholder` (fully hardcoded deterministic mock mode)
+- Safe mock generation behavior with fallback handling
+- Local session sync via `localStorage`
+- Vercel serverless telemetry APIs for active lobbies
+- One-command lobby wipe utility (`npm run clear:games`)
+
+---
+
+## Tech Stack
+
+- **Frontend:** React 18, Vite
+- **State model:** Pure game engine transitions in `src/game/engine.js`
+- **Storage:** localStorage (frontend session persistence)
+- **Backend (telemetry):** Vercel Serverless Functions + Upstash Redis REST API
+
+---
+
+## Project Structure
+
+```text
+src/
+  App.jsx
+  components/
+  game/
+    engine.js
+    constants.js
+    geminiMock.js
+    videoMock.js
+    imageMock.js
+    placeholderMock.js
+  hooks/
+
+api/
+  _lib/
+  lobbies/
+    heartbeat.js
+    most-active.js
+    top.js
+    g1-widget.js
+    clear-all.js
+
+scripts/
+  clearGames.mjs
+```
+
+---
+
+## Local Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL in multiple tabs/devices:
-- one tab for host display
-- others for player companion screens
+For LAN/device testing:
 
-## Ngrok testing (reserved domain)
-
-This repo is configured for your ngrok domain:
-`unlicentiated-unsqueamishly-mahalia.ngrok-free.app`
-
-1. Start Vite on all interfaces:
 ```bash
 npm run dev:host
 ```
 
-2. In another terminal, start ngrok:
-```bash
-ngrok http --domain=unlicentiated-unsqueamishly-mahalia.ngrok-free.app 5173
-```
+Then open from host + phones on the same network.
 
-3. Open:
-`https://unlicentiated-unsqueamishly-mahalia.ngrok-free.app`
+---
 
-### Environment config
+## Environment Variables
 
-- `.env` is already set for your domain.
-- Copy `.env.example` if you need to reset defaults.
+### Frontend / local
+See `.env.example`.
 
-## Deploy to Vercel (quick)
+### Vercel (required for telemetry APIs)
+Set these in **Project Settings → Environment Variables**:
+
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+Optional for CLI helper:
+- `CLEAR_GAMES_BASE_URL` (defaults to deployed URL in script)
+
+---
+
+## Deploy (Vercel)
 
 ```bash
 npm i -g vercel
 vercel
 ```
 
-Set project framework to **Vite** when prompted.
+Framework: **Vite**
 
-## Lobby telemetry API (for Mentra G1)
+After deploy, verify telemetry endpoints:
 
-This repo now includes serverless endpoints:
-- `POST /api/lobbies/heartbeat`
 - `GET /api/lobbies/most-active`
 - `GET /api/lobbies/top?limit=3`
-- `GET /api/lobbies/g1-widget` (compact glasses payload)
+- `GET /api/lobbies/g1-widget`
 
-Set these environment variables in Vercel Project Settings:
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
+---
 
-Host client sends heartbeat every 5s + on state updates.
+## Telemetry API
 
-### Clear all games command
+### `POST /api/lobbies/heartbeat`
+Host client heartbeat (sent every 5 seconds + stage changes).
+
+### `GET /api/lobbies/most-active`
+Returns top active lobby (or `{ "roomCode": null }` when empty).
+
+### `GET /api/lobbies/top?limit=3`
+Returns ranked lobbies by activity score.
+
+### `GET /api/lobbies/g1-widget`
+Compact glasses-friendly payload, e.g.:
+
+```json
+{
+  "roomCode": "ABCD",
+  "playerCount": 6,
+  "stage": "VOTE",
+  "round": "2/3",
+  "line": "ABCD • 6p • VOTE • R2/3"
+}
+```
+
+### `POST /api/lobbies/clear-all`
+Clears all lobby telemetry data from Redis.
+
+---
+
+## Commands
 
 ```bash
+npm run dev
+npm run dev:host
+npm run build
+npm run preview
+npm run preview:host
 npm run clear:games
 ```
 
-Optional custom target URL:
+Clear command with custom target:
 
 ```bash
-CLEAR_GAMES_BASE_URL=https://plottwist-nine.vercel.app npm run clear:games
+CLEAR_GAMES_BASE_URL=https://your-deployment.vercel.app npm run clear:games
 ```
 
-## What’s implemented
+---
 
-- ✅ Room creation and join with 4-char room code
-- ✅ Lobby with player list + host-controlled settings
-- ✅ Timed submissions per round
-- ✅ Graceful fallback for missing submissions
-- ✅ AI scene generation layer (Gemini mocked locally)
-- ✅ Safety filtering + timeout fallback narration
-- ✅ Sequential reveal flow
-- ✅ Voting with self-vote blocking
-- ✅ Score calculation + leaderboard
-- ✅ Story memory callbacks bounded by configurable memory limit
-- ✅ Final winner screen + play again
+## Testing Media Modes
 
-## Architecture (frontend-only MVP)
+1. Create a room as host
+2. In lobby settings, choose media mode:
+   - Video mode
+   - Image mode
+   - Placeholder mode
+3. Start game and submit twists
+4. Confirm showcase/reveal render expected media type
 
-- `src/game/engine.js`: pure state transitions (DRY/SOLID-ish)
-- `src/game/geminiMock.js`: AI generation stub with safety/timeout behavior
-- `src/game/storage.js`: localStorage session persistence + cross-tab sync
-- `src/components/*`: stage-oriented presentational components
-- `src/App.jsx`: flow orchestration
+---
 
-## Hackathon note
+## Current Constraints
 
-This build intentionally prioritizes demo reliability (P0/P1 from PRD).
+- Gameplay sync is local-first (not a full authoritative multiplayer backend yet)
+- AI generation is mocked for predictable demos
+- Telemetry APIs are separate from core game-state authority
 
-Current limitations:
-- No backend/WebSocket infra yet (state sync via `localStorage` events)
-- Gemini integration is mocked, not calling server-side API key
-- No authentication or production anti-abuse controls yet
+---
 
-## Suggested next steps
+## Next Up (Suggested)
 
-1. Replace `geminiMock` with backend Gemini service.
-2. Move room/session state to WebSocket game server.
-3. Add profanity blocklist service and request validation on backend.
-4. Add idempotent vote endpoint and rate limiting.
+- Server-authoritative room state (WebSocket or realtime backend)
+- Real Gemini/Imagen/Veo backend integration
+- Auth and abuse controls for public rooms
+- Structured analytics dashboard for hosts/events
