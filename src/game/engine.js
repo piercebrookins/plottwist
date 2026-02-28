@@ -72,17 +72,13 @@ export const updateSettings = (session, partial) => ({
 });
 
 export const buildRoundPrompt = (session) => {
-  const prompts = PROMPT_PACKS[session.settings.promptPack] || PROMPT_PACKS.noir;
-  const seedPrompt = prompts[session.roundIndex % prompts.length];
+  const prompts = PROMPT_PACKS[session.settings.promptPack] || PROMPT_PACKS.quiplash;
+  if (!prompts.length) return "A suspicious thing to shout in a grocery store";
 
-  if (!session.memory.length) return seedPrompt;
-
-  const callback = session.memory
-    .slice(-2)
-    .map((m) => m.twist)
-    .join(" then ");
-
-  return `${seedPrompt} (Callback memory: ${callback})`;
+  const recent = new Set(session.rounds.slice(-2).map((r) => r.prompt));
+  const pool = prompts.filter((p) => !recent.has(p));
+  const source = pool.length ? pool : prompts;
+  return source[Math.floor(Math.random() * source.length)];
 };
 
 const makeRound = (session, prompt) => ({

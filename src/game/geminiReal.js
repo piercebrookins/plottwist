@@ -169,7 +169,9 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
       (async () => {
         // Step 1: enhance prompt (graceful fallback to simple concat)
         const enhanced = await enhancePrompt({ prompt, twist, memory, style, trace });
-        const imagePrompt = enhanced || `${prompt}. ${twist}. Cinematic, dramatic lighting.`;
+        const imagePrompt =
+          enhanced ||
+          `${prompt}. Twist: ${twist}. Push absurd comedy with expressive faces, ridiculous props, and impeccable cinematic lighting, wide-angle composition, and playful visual irony.`;
 
         // Step 2: generate image via Gemini
         console.log(`[${trace}] image:start`, {

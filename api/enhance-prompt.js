@@ -5,9 +5,10 @@ const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 const SYSTEM_INSTRUCTION =
-  "You are an image-prompt engineer. Given a game scenario (prompt + twist + optional memory), " +
-  "write a vivid 2-3 sentence image generation prompt. Focus on visual details, lighting, " +
-  "composition, and mood. Do NOT include any text-in-image instructions. Output ONLY the prompt.";
+  "You are a comedic image-prompt engineer for a party game. Given a scenario (prompt + twist + optional memory), " +
+  "write a vivid 2-3 sentence prompt that is visually clear AND funny. Lean into absurd contrast, " +
+  "awkward timing, overconfident expressions, and comedic props while keeping it PG-13. " +
+  "Include cinematic camera framing, lighting, and setting details. No text-in-image instructions. Output ONLY the prompt.";
 
 export default async function handler(req, res) {
   const logger = createLogger("enhance-prompt");
@@ -43,7 +44,7 @@ export default async function handler(req, res) {
       `Player twist: "${twist}"\n` +
       (style ? `Style: ${style}\n` : "") +
       (memoryText ? `Memory:${memoryText}\n` : "") +
-      `\nWrite a vivid image generation prompt for this scene.`;
+      `\nWrite a funny, cinematic image prompt for this scene with clear comedic payoff.`;
 
     const geminiModel = process.env.GEMINI_ENHANCE_MODEL || DEFAULT_MODEL;
     logger.info("calling-gemini", { model: geminiModel });

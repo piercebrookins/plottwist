@@ -18,7 +18,7 @@ import {
   withVote,
 } from "./game/engine";
 import { GAME_STAGES, MAX_PLAYERS } from "./game/constants";
-import { generateContinuationPrompt, generateScene } from "./game/geminiReal";
+import { generateScene } from "./game/geminiReal";
 import { apiCreateRoom, apiJoinRoom, apiSaveRoomMedia } from "./game/roomApi";
 import { currentRound, playerById } from "./game/selectors";
 import { useSessionStore } from "./hooks/useSessionStore";
@@ -266,24 +266,7 @@ function App() {
 
   const goNextRound = async () => {
     if (!session || !me?.isHost) return;
-
-    const justFinishedRound = session.rounds.at(-1);
-    const winner = justFinishedRound?.submissions?.find(
-      (s) => s.id === justFinishedRound?.winnerSubmissionId
-    );
-
-    if (!justFinishedRound || !winner) {
-      apply((s) => nextRoundOrFinal(s));
-      return;
-    }
-
-    const prompt = await generateContinuationPrompt({
-      roundOnePrompt: justFinishedRound.prompt,
-      winningTwist: winner.text,
-      problemStatement: session.settings.problemStatement,
-    });
-
-    apply((s) => nextRoundOrFinal(s, prompt));
+    apply((s) => nextRoundOrFinal(s));
   };
 
   const addMockPlayer = () => {
