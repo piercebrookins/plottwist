@@ -9,16 +9,26 @@ const SYSTEM_INSTRUCTION =
   "composition, and mood. Do NOT include any text-in-image instructions. Output ONLY the prompt.";
 
 export default async function handler(req, res) {
+  const trace = `[enhance-prompt ${Date.now()}]`;
   if (allowOptions(req, res)) return;
   cors(res);
 
   if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return json(res, 500, { error: "GEMINI_API_KEY not configured" });
+  if (!apiKey) {
+    console.error(trace, "missing GEMINI_API_KEY");
+    return json(res, 500, { error: "GEMINI_API_KEY not configured" });
+  }
 
   try {
     const { prompt, twist, memory, style } = await readBody(req);
+    console.log(trace, "request", {
+      promptChars: (prompt || "").length,
+      twistChars: (twist || "").length,
+      memoryCount: Array.isArray(memory) ? memory.length : 0,
+      style,
+    });
     if (!prompt || !twist) {
       return json(res, 400, { error: "prompt and twist are required" });
     }
@@ -35,6 +45,7 @@ export default async function handler(req, res) {
       `\nWrite a vivid image generation prompt for this scene.`;
 
     const geminiModel = process.env.GEMINI_ENHANCE_MODEL || DEFAULT_MODEL;
+    console.log(trace, "calling-gemini", { model: geminiModel });
     const response = await fetch(`${GEMINI_BASE}/${geminiModel}:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -47,6 +58,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.text();
+      console.error(trace, "gemini-http-error", { status: response.status, body: err?.slice?.(0, 400) });
       return json(res, response.status, { error: `Gemini API error: ${err}` });
     }
 
@@ -54,11 +66,14 @@ export default async function handler(req, res) {
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!text) {
+      console.error(trace, "no-text-returned");
       return json(res, 502, { error: "No text returned from Gemini" });
     }
 
+    console.log(trace, "ok", { enhancedChars: text.trim().length });
     return json(res, 200, { ok: true, enhancedPrompt: text.trim() });
   } catch (error) {
+    console.error(trace, "error", { message: error.message, stack: error.stack });
     return json(res, 500, { error: error.message || "Internal error" });
   }
 }

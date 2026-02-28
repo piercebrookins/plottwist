@@ -39,8 +39,16 @@ const BOT_NAMES = ["Pixel", "NoirNerd", "Captain Twist", "Glue Gun", "Soda Greml
 function App() {
   const [roomCode, setRoomCode] = useState(() => getIdentityForTab().roomCode || null);
   const [playerId, setPlayerId] = useState(() => getIdentityForTab().playerId || null);
+  const [generationLogs, setGenerationLogs] = useState([]);
   const { session, update } = useSessionStore(roomCode);
   const generatingRoundRef = useRef(null);
+
+  const pushGenerationLog = (entry) => {
+    const text = typeof entry === "string" ? entry : JSON.stringify(entry);
+    const line = `${new Date().toLocaleTimeString()} · ${text}`;
+    setGenerationLogs((prev) => [...prev.slice(-15), line]);
+    console.log("[generation]", text);
+  };
 
   const me = useMemo(() => playerById(session, playerId), [session, playerId]);
   const round = currentRound(session);
@@ -126,24 +134,54 @@ function App() {
     generatingRoundRef.current = roundId;
 
     try {
+      setGenerationLogs([]);
+      pushGenerationLog({ event: "round-generation-start", roomCode: session.roomCode, roundId, mediaMode: session.settings.mediaMode });
+
       const closed = closeSubmissions(session);
-      update(closed);
+      await update(closed);
 
       const r = currentRound(closed);
+      pushGenerationLog({
+        event: "submissions-ready",
+        count: r.submissions.length,
+        mediaMode: closed.settings.mediaMode,
+        revealStyle: closed.settings.revealStyle,
+      });
+
       const generated = await Promise.all(
-        r.submissions.map(async (submission) => {
-          const ai = await generateScene({
-            prompt: r.prompt,
-            twist: submission.text,
-            memory: closed.memory,
-            style: closed.settings.revealStyle,
-            mediaMode: closed.settings.mediaMode,
-          });
-          return { ...submission, ...ai };
+        r.submissions.map(async (submission, idx) => {
+          const startedAt = performance.now();
+          pushGenerationLog({ event: "submission-start", index: idx + 1, playerId: submission.playerId, twist: submission.text });
+
+          try {
+            const ai = await generateScene({
+              prompt: r.prompt,
+              twist: submission.text,
+              memory: closed.memory,
+              style: closed.settings.revealStyle,
+              mediaMode: closed.settings.mediaMode,
+            });
+
+            pushGenerationLog({
+              event: "submission-done",
+              index: idx + 1,
+              ms: Math.round(performance.now() - startedAt),
+              mediaType: ai.mediaType,
+              provider: ai.mediaProvider,
+              fallback: ai.fallback,
+              safetyStatus: ai.safetyStatus,
+            });
+
+            return { ...submission, ...ai };
+          } catch (error) {
+            pushGenerationLog({ event: "submission-error", index: idx + 1, message: error.message });
+            throw error;
+          }
         })
       );
 
-      update(withGeneratedScenes(closed, generated));
+      pushGenerationLog({ event: "round-generation-complete", generated: generated.length });
+      await update(withGeneratedScenes(closed, generated));
     } finally {
       generatingRoundRef.current = null;
     }
@@ -220,7 +258,23 @@ function App() {
   }
 
   if (session.status === GAME_STAGES.GENERATE) {
-    return <div className="loading">Generating cinematic chaos…</div>;
+    return (
+      <div className="loading">
+        <div>
+          <div>Generating cinematic chaos…</div>
+          <div className="card" style={{ marginTop: 12, textAlign: "left", maxWidth: 780 }}>
+            <h3 style={{ marginTop: 0 }}>Generation debug</h3>
+            <ul className="clean-list">
+              {(generationLogs.length ? generationLogs : ["Waiting for generation logs…"]).map((line, idx) => (
+                <li key={`${idx}-${line}`} style={{ fontFamily: "monospace", fontSize: 12, opacity: 0.92 }}>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (session.status === GAME_STAGES.VOTE && round) {

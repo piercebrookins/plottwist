@@ -130,16 +130,6 @@ export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
                   alt={session.settings.mediaMode === "placeholder" ? "Placeholder still" : "Demo generated still"}
                 />
               )}
-              <small>
-                Demo
-                {session.settings.mediaMode === "video"
-                  ? " Veo"
-                  : session.settings.mediaMode === "placeholder"
-                    ? " Placeholder"
-                    : " Imagen"}
-                {" "}
-                preview based on your twist
-              </small>
             </div>
           </>
         ) : (
