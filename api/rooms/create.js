@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
 };
 
 export default async function handler(req, res) {
+  const trace = `[rooms/create ${Date.now()}]`;
   if (allowOptions(req, res)) return;
   cors(res);
   if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
@@ -27,6 +28,7 @@ export default async function handler(req, res) {
   try {
     const body = await readBody(req);
     const hostName = String(body.hostName || "Host").trim().slice(0, 20) || "Host";
+    console.log(trace, "request", { hostName });
 
     const hostPlayer = {
       id: uid(),
@@ -53,8 +55,10 @@ export default async function handler(req, res) {
     };
 
     const saved = await saveRoomSession(session);
+    console.log(trace, "created", { roomCode: saved.roomCode, hostPlayerId: hostPlayer.id });
     return json(res, 200, { session: saved, playerId: hostPlayer.id });
   } catch (error) {
+    console.error(trace, "error", { message: error.message, stack: error.stack });
     return json(res, 500, { error: error.message || "Internal error" });
   }
 }

@@ -2,7 +2,10 @@ const jsonHeaders = { "Content-Type": "application/json" };
 
 const parse = async (res) => {
   const payload = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(payload.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    const detail = payload?.error || JSON.stringify(payload || {});
+    throw new Error(`HTTP ${res.status}: ${detail}`);
+  }
   return payload;
 };
 

@@ -87,7 +87,8 @@ function App() {
       setRoomCode(next.roomCode);
       setPlayerId(nextPlayerId);
     } catch (error) {
-      alert(error.message || "Failed to create room");
+      console.error("createRoom failed", error);
+      alert(`Create room failed: ${error.message || "unknown error"}`);
     }
   };
 
@@ -102,7 +103,8 @@ function App() {
       setRoomCode(joined.roomCode);
       setPlayerId(nextPlayerId);
     } catch (error) {
-      alert(error.message || "Room not found or expired");
+      console.error("joinRoom failed", error);
+      alert(`Join failed: ${error.message || "Room not found or expired"}`);
     }
   };
 
