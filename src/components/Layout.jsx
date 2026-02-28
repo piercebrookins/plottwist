@@ -1,5 +1,5 @@
-export const Screen = ({ title, subtitle, children, actions }) => (
-  <main className="screen">
+export const Screen = ({ title, subtitle, children, actions, className = "" }) => (
+  <main className={`screen ${className}`.trim()}>
     <header className="screen__header">
       <h1>{title}</h1>
       {subtitle ? <p>{subtitle}</p> : null}

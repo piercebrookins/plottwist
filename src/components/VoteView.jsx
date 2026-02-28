@@ -50,6 +50,7 @@ export const VoteView = ({
   if (round.votePhase === "showcase" && !showcaseDone) {
     return (
       <Screen
+        className="phase-screen phase-screen--vote phase-screen--showcase"
         title={`Watch clips ${showcaseIndex + 1}/${round.submissions.length}`}
         subtitle="Watch every generated video before voting opens"
         actions={
@@ -111,6 +112,7 @@ export const VoteView = ({
   if (round.votePhase === "showcase" && showcaseDone) {
     return (
       <Screen
+        className="phase-screen phase-screen--vote phase-screen--showcase"
         title="Showcase complete"
         subtitle="All clips shown. Waiting for host to open voting."
         actions={me.isHost ? <button onClick={onStartVoting}>Open voting</button> : null}
@@ -120,6 +122,7 @@ export const VoteView = ({
 
   return (
     <Screen
+      className="phase-screen phase-screen--vote"
       title="Vote for your favorite"
       subtitle="One vote. No self-votes. Choose wisely, chaos goblin."
       actions={me.isHost ? <button onClick={onFinishVoting}>Close voting now</button> : null}
@@ -136,7 +139,7 @@ export const VoteView = ({
         <span className="timer-label">voting seconds</span>
       </div>
 
-      <div className="card">
+      <div className="card vote-options-card">
         <ul className="clean-list spaced">
           {round.submissions.map((submission) => {
             const disabled = submission.id === mySubmission?.id;

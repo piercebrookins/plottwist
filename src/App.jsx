@@ -17,7 +17,7 @@ import {
   withSubmission,
   withVote,
 } from "./game/engine";
-import { GAME_STAGES } from "./game/constants";
+import { GAME_STAGES, MAX_PLAYERS } from "./game/constants";
 import { generateContinuationPrompt, generateScene } from "./game/geminiReal";
 import { loadSession, saveSession } from "./game/storage";
 import { currentRound, playerById } from "./game/selectors";
@@ -176,7 +176,25 @@ function App() {
   };
 
   const addMockPlayer = () => {
-    const name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + Math.floor(Math.random() * 9);
+    if (!session) return;
+    if (session.players.length >= MAX_PLAYERS) {
+      alert("Room is full (10 players max).");
+      return;
+    }
+
+    const used = new Set(session.players.map((p) => p.name.toLowerCase()));
+    let name = "";
+    for (let i = 0; i < 80; i += 1) {
+      const candidate = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + Math.floor(Math.random() * 99);
+      if (!used.has(candidate.toLowerCase())) {
+        name = candidate;
+        break;
+      }
+    }
+    if (!name) {
+      name = `Bot${session.players.length + 1}-${Date.now().toString(36).slice(-3)}`;
+    }
+
     apply((s) => addPlayer(s, name));
   };
 

@@ -9,12 +9,13 @@ export const RoundResultView = ({ session, round, onNextRound }) => {
 
   return (
     <Screen
+      className="phase-screen phase-screen--results"
       title={`Round ${round.roundNumber} results`}
       subtitle="Votes are in. Scores updated. Continue the chaos." 
       actions={<button onClick={onNextRound}>Next round</button>}
     >
-      <div className="card">
-        <ol>
+      <div className="card results-board-card">
+        <ol className="results-ranking">
           {sorted.map((submission, index) => (
             <li key={submission.id} className={index === 0 ? "winner-row" : ""}>
               <strong>{playerName(session, submission.playerId)}</strong>: <span className="vote-count">{votes.get(submission.id) || 0} votes</span>
@@ -23,7 +24,7 @@ export const RoundResultView = ({ session, round, onNextRound }) => {
           ))}
         </ol>
       </div>
-      <div className="card">
+      <div className="card memory-chain-card">
         <h3>Memory chain</h3>
         <ul className="clean-list">
           {session.memory.map((item) => (

@@ -38,6 +38,7 @@ export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
   if (me.isHost) {
     return (
       <Screen
+        className="phase-screen phase-screen--submit phase-screen--host"
         title={`Round ${round.roundNumber}: Collecting submissions`}
         subtitle={round.prompt}
         actions={<button onClick={onForceClose}>Force start generation</button>}
@@ -55,7 +56,7 @@ export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
           <StatPill label="Waiting" value={Math.max(nonHostPlayers.length - round.submissions.length, 0)} />
         </div>
 
-        <div className="card">
+        <div className="card host-status-panel">
           <h3>Player submission status</h3>
           <ul className="clean-list host-status-grid">
             {nonHostPlayers.map((player) => {
@@ -76,6 +77,7 @@ export const SubmitView = ({ session, me, round, onSubmit, onForceClose }) => {
 
   return (
     <Screen
+      className="phase-screen phase-screen--submit"
       title={`Round ${round.roundNumber}: Submit your twist`}
       subtitle={round.prompt}
       actions={

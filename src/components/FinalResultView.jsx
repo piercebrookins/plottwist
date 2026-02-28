@@ -1,15 +1,19 @@
 import { sortedLeaderboard } from "../game/engine";
 import { Screen } from "./Layout";
+import { WinnerCelebration } from "./WinnerCelebration";
 
 export const FinalResultView = ({ session, onReset }) => {
   const board = sortedLeaderboard(session);
+  const winnerName = board[0]?.name || "Nobody";
   return (
     <Screen
+      className="phase-screen phase-screen--final"
       title="Final leaderboard"
-      subtitle={`Winner: ${board[0]?.name || "Nobody"}. Absolute cinema.`}
+      subtitle={`Winner: ${winnerName}. Absolute cinema.`}
       actions={<button onClick={onReset}>Play again</button>}
     >
-      <div className="card confetti-lite">
+      <WinnerCelebration winnerName={winnerName} />
+      <div className="card confetti-lite final-board-card">
         <ol className="leaderboard-list">
           {board.map((player, idx) => (
             <li key={player.id} className={`leaderboard-item ${idx === 0 ? "first" : ""}`} style={{ "--player-color": player.color }}>

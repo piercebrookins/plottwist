@@ -1,5 +1,6 @@
 import { playerName } from "../game/selectors";
 import { Screen } from "./Layout";
+import { WinnerCelebration } from "./WinnerCelebration";
 
 export const RevealView = ({ session, round, onNext }) => {
   const winner = round.submissions.find((s) => s.id === round.winnerSubmissionId);
@@ -7,6 +8,7 @@ export const RevealView = ({ session, round, onNext }) => {
   if (!winner || round.revealCursor > 0) {
     return (
       <Screen
+        className="phase-screen phase-screen--reveal"
         title="Winner reveal complete"
         subtitle="Points locked. Let’s hit the round scoreboard."
         actions={<button onClick={onNext}>Show round scoreboard</button>}
@@ -16,11 +18,13 @@ export const RevealView = ({ session, round, onNext }) => {
 
   return (
     <Screen
+      className="phase-screen phase-screen--reveal"
       title="🏆 Round Winner"
       subtitle={`${playerName(session, winner.playerId)} wins with: ${winner.text}`}
       actions={<button onClick={onNext}>Continue</button>}
     >
-      <article className="card reveal">
+      <WinnerCelebration winnerName={playerName(session, winner.playerId)} />
+      <article className="card reveal winner-reveal-card">
         <p>{winner.generatedScene || "Generating..."}</p>
         {winner.mediaUrl ? (
           <div className="video-wrap">
