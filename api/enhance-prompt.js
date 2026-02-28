@@ -1,7 +1,7 @@
 import { allowOptions, cors, json, readBody } from "./_lib/http.js";
 import { createLogger } from "./_lib/vercelLog.js";
 
-const DEFAULT_MODEL = "gemini-2.0-flash";
+const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 const SYSTEM_INSTRUCTION =
