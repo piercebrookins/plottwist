@@ -18,6 +18,12 @@ const oneSentence = (text) => {
     : `${sentence}.`;
 };
 
+const normalizeTwistPhrase = (text) => {
+  const raw = String(text || "").trim();
+  if (!raw) return "the winning twist";
+  return raw.replace(/^["'“”‘’]+|["'“”‘’]+$/g, "");
+};
+
 export const generateContinuationPrompt = async ({
   roundOnePrompt,
   winningTwist,
@@ -32,7 +38,9 @@ export const generateContinuationPrompt = async ({
   };
 
   const lens = lensByProblem[problemStatement] || lensByProblem.film;
-  const draft = `After ${winningTwist}, what happens next ${lens} from: ${roundOnePrompt}`;
+  const twist = normalizeTwistPhrase(winningTwist);
+  const basePrompt = String(roundOnePrompt || "the original setup").trim();
+  const draft = `Round 2: Build the next scene ${lens}. Continue from "${basePrompt}" and escalate the winning twist "${twist}" into a bigger, unexpected consequence.`;
   return oneSentence(draft);
 };
 
