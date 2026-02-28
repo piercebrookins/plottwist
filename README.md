@@ -1,130 +1,173 @@
-# PlotTwist
+<div align="center">
+  <h1>🍿 PlotTwist</h1>
+  <p>
+    <b>A multiplayer party game where players write absurd plot twists and the app turns them into dramatic scene reveals.</b>
+  </p>
+  <p>
+    Built with React + Vite, with serverless telemetry endpoints for live lobby monitoring.
+  </p>
+  <br />
+</div>
 
-A multiplayer party game where players write absurd plot twists and the app turns them into dramatic scene reveals (video, image, or placeholder mode).
+## 📌 Table of Contents
 
-Built with React + Vite, with serverless telemetry endpoints for live lobby monitoring (including Mentra / G1 display use cases).
-
----
-
-## Features
-
-- Room-based multiplayer flow with short join codes
-- Host-controlled game settings
-- Round pipeline: prompt → write → generate → showcase → vote → reveal → scores
-- Three media output modes:
-  - `video`
-  - `image`
-  - `placeholder` (fully hardcoded deterministic mock mode)
-- Safe mock generation behavior with fallback handling
-- Local session sync via `localStorage`
-- Vercel serverless telemetry APIs for active lobbies
-- One-command lobby wipe utility (`npm run clear:games`)
-
----
-
-## Tech Stack
-
-- **Frontend:** React 18, Vite
-- **State model:** Pure game engine transitions in `src/game/engine.js`
-- **Storage:** localStorage (frontend session persistence)
-- **Backend (telemetry):** Vercel Serverless Functions + Upstash Redis REST API
+- [🎮 Features](#-features)
+- [🛠️ Tech Stack](#-tech-stack)
+- [📂 Project Structure](#-project-structure)
+- [🚀 Local Development](#-local-development)
+  - [Environment Variables](#environment-variables)
+  - [Commands](#commands)
+- [🌐 Deployment](#-deployment-vercel)
+- [📡 Telemetry API](#-telemetry-api)
+- [🧪 Testing Media Modes](#-testing-media-modes)
+- [🚧 Constraints & Roadmap](#-constraints--roadmap)
 
 ---
 
-## Project Structure
+## 🎮 Features
+
+- **Room-based multiplayer flow** with short 4-character join codes.
+- **Host-controlled game settings** to fully customize rounds and features.
+- **Interactive Round Pipeline**: `Prompt → Write → Generate → Showcase → Vote → Reveal → Scores`
+- **Generative Media Modes**:
+  - 🎬 `video` - Generate dramatic video clips
+  - 🖼️ `image` - Render detailed cinematic images
+  - 📝 `placeholder` - Quick, fully deterministic mock mode
+- **Safe Generation** with predictable fallback handling and mock generation behavior.
+- **Persistent Local State** synced seamlessly via `localStorage`.
+- **Live Monitoring** with Vercel serverless telemetry APIs for tracking active lobbies.
+- **Admin utilities** including a one-command lobby wipe (`npm run clear:games`).
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend Core
+- **Framework:** React 18, Vite
+- **State Model:** Pure game engine transitions (see [`src/game/engine.js`](src/game/engine.js))
+- **Storage:** Frontend session persistence via `localStorage`
+
+### Backend / Telemetry
+- **API Engine:** Vercel Serverless Functions
+- **Database:** Upstash Redis REST API
+
+---
+
+## 📂 Project Structure
 
 ```text
 src/
-  App.jsx
-  components/
-  game/
-    engine.js
-    constants.js
-    geminiMock.js
-    videoMock.js
-    imageMock.js
-    placeholderMock.js
-  hooks/
+├── App.jsx            # Main view orchestrator
+├── components/        # UI components for game stages
+├── game/              # Core game mechanics and state
+│   ├── engine.js      # Pure game state transitions
+│   ├── constants.js   # Game variables & config
+│   ├── geminiMock.js  # AI mocks
+│   ├── videoMock.js   # Media rendering mocks
+│   ├── imageMock.js
+│   └── placeholderMock.js
+└── hooks/             # Custom React hooks
 
-api/
-  _lib/
-  lobbies/
-    heartbeat.js
-    most-active.js
-    top.js
-    g1-widget.js
-    clear-all.js
+api/                   # Vercel Serverless API
+├── _lib/              # Shared backend logic
+└── lobbies/           # Telemetry endpoints (heartbeat, ranking, clear)
 
-scripts/
-  clearGames.mjs
+scripts/               # CLI utilities
+└── clearGames.mjs     # Dev-tool script to clear all sessions
 ```
 
 ---
 
-## Local Development
+## 🚀 Local Development
+
+First, install dependencies:
 
 ```bash
 npm install
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-For LAN/device testing:
+For **LAN / Multi-device testing**, expose the local server to your network:
 
 ```bash
 npm run dev:host
 ```
+*(Then open the provided `Network` URL from host + phones on the same network.)*
 
-Then open from host + phones on the same network.
+### Environment Variables
 
----
+#### Frontend (Local)
+Copy the example environment file and modify as needed:
+```bash
+cp .env.example .env
+```
+*(Reference `.env.example` for required keys)*
 
-## Environment Variables
-
-### Frontend / local
-See `.env.example`.
-
-### Vercel (required for telemetry APIs)
-Set these in **Project Settings → Environment Variables**:
-
+#### Vercel (Telemetry APIs)
+To run the serverless APIs properly, set these in your **Project Settings → Environment Variables**:
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 
-Optional for CLI helper:
-- `CLEAR_GAMES_BASE_URL` (defaults to deployed URL in script)
+*(Optional)* For the CLI helper script to target prod:
+- `CLEAR_GAMES_BASE_URL` (Defaults to your deployed URL in the script)
+
+### Commands
+
+| Command | Action |
+| --- | --- |
+| `npm run dev` | Starts local dev server |
+| `npm run dev:host` | Starts local dev server exposed to network |
+| `npm run build` | Builds app for production |
+| `npm run preview` | Previews the prod build locally |
+| `npm run preview:host`| Previews prod build exposed to network |
+| `npm run clear:games` | Clears telemetry data (host wipe) |
+
+*You can clear a remote prod environment with:*
+```bash
+CLEAR_GAMES_BASE_URL=https://your-deployment.vercel.app npm run clear:games
+```
 
 ---
 
-## Deploy (Vercel)
+## 🌐 Deployment (Vercel)
+
+This application is configured for a plug-and-play **Vite** deployment on Vercel.
 
 ```bash
+# Install Vercel CLI (if not already installed)
 npm i -g vercel
+
+# Deploy project
 vercel
 ```
 
-Framework: **Vite**
-
-After deploy, verify telemetry endpoints:
-
+After deploying, verify the telemetry endpoints are live:
 - `GET /api/lobbies/most-active`
 - `GET /api/lobbies/top?limit=3`
 - `GET /api/lobbies/g1-widget`
 
 ---
 
-## Telemetry API
+## 📡 Telemetry API
+
+The Vercel Serverless Functions push game data to an Upstash Redis store to monitor live lobbys:
 
 ### `POST /api/lobbies/heartbeat`
-Host client heartbeat (sent every 5 seconds + stage changes).
+Host client heartbeat (sent every 5 seconds + on stage changes). Keeps the lobby marked as 'active'.
 
 ### `GET /api/lobbies/most-active`
-Returns top active lobby (or `{ "roomCode": null }` when empty).
+Returns the single top active lobby. Returns `{ "roomCode": null }` when empty.
 
 ### `GET /api/lobbies/top?limit=3`
-Returns ranked lobbies by activity score.
+Returns ranked lobbies sorted by activity score.
 
 ### `GET /api/lobbies/g1-widget`
-Compact glasses-friendly payload, e.g.:
-
+A compact, glasses-friendly text payload block:
 ```json
 {
   "roomCode": "ABCD",
@@ -136,52 +179,31 @@ Compact glasses-friendly payload, e.g.:
 ```
 
 ### `POST /api/lobbies/clear-all`
-Clears all lobby telemetry data from Redis.
+Clears all telemetry and lobby data from the Upstash Redis database.
 
 ---
 
-## Commands
+## 🧪 Testing Media Modes
 
-```bash
-npm run dev
-npm run dev:host
-npm run build
-npm run preview
-npm run preview:host
-npm run clear:games
-```
-
-Clear command with custom target:
-
-```bash
-CLEAR_GAMES_BASE_URL=https://your-deployment.vercel.app npm run clear:games
-```
+1. Create a room as a **host**.
+2. Open the **lobby settings** and choose your desired media mode:
+   - *Video mode*
+   - *Image mode*
+   - *Placeholder mode*
+3. Start the game, add twists, and submit.
+4. Confirm the Showcase & Reveal stages render the expected media type.
 
 ---
 
-## Testing Media Modes
+## 🚧 Constraints & Roadmap
 
-1. Create a room as host
-2. In lobby settings, choose media mode:
-   - Video mode
-   - Image mode
-   - Placeholder mode
-3. Start game and submit twists
-4. Confirm showcase/reveal render expected media type
+### Current Constraints
+- **Local-First Authority:** Gameplay sync is entirely local-first (we don't have a fully authoritative multiplayer backend yet).
+- **Mocked Generations:** AI generation is mocked right out of the box for predictable demos without an active LLM backend.
+- **Telem vs State:** Telemetry APIs are separate from core game-state authority.
 
----
-
-## Current Constraints
-
-- Gameplay sync is local-first (not a full authoritative multiplayer backend yet)
-- AI generation is mocked for predictable demos
-- Telemetry APIs are separate from core game-state authority
-
----
-
-## Next Up (Suggested)
-
-- Server-authoritative room state (WebSocket or realtime backend)
-- Real Gemini/Imagen/Veo backend integration
-- Auth and abuse controls for public rooms
-- Structured analytics dashboard for hosts/events
+### Next Up (Suggested)
+- [ ] **Authoritative Game State:** Move room state strictly to a WebSocket or real-time backend.
+- [ ] **AI Backend Integration:** Wire up actual real Gemini/Imagen/Veo API calls in place of the generation mocks.
+- [ ] **Auth & Moderation:** Add proper auth, abuse controls, and content filtering for public rooms.
+- [ ] **Analytics Dashboard:** Build a structured analytics dashboard for hosts/events.

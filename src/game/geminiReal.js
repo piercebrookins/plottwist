@@ -2,6 +2,7 @@ import { pickDemoImage } from "./imageMock";
 import { pickDemoVideo } from "./videoMock";
 import { pickPlaceholderMedia } from "./placeholderMock";
 import { generateImage } from "./geminiImage";
+import { generateVideo } from "./geminiVideo";
 
 // Re-export text-only helper unchanged
 export { generateContinuationPrompt } from "./geminiMock";
@@ -78,6 +79,7 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
       imageUrl: placeholder.mediaUrl,
       videoUrl: null,
     };
+    return result;
   }
 
   // Profanity filter
@@ -98,34 +100,67 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
     };
   }
 
-  // For non-image modes, fall back to mock-style generation (video not yet supported via Gemini)
-  if (mediaMode !== "image") {
-    console.log(`[${trace}] generate:mock-non-image`, { mediaMode });
-    const mediaUrl = pickDemoVideo(twist);
-    const memoryText = memory.length ? ` Callback echoes: ${memory.map((m) => m.twist).join("; ")}.` : "";
-    const usedMemory = memory.length > 0 && Math.random() > 0.4;
-    const narration =
-      style === "mini screenplay"
-        ? `INT. CHAOTIC SET - NIGHT\nPrompt: ${prompt}\nTwist: ${twist}.\nA beat of silence. Then everyone realizes this changes everything.${usedMemory ? memoryText : ""}`
-        : `Under flickering lights, ${twist}. The narrator leans in, voice trembling, while the room recalculates fate.${usedMemory ? memoryText : ""}`;
-    return {
-      safetyStatus: "safe",
-      generatedScene: narration,
-      usedMemory,
-      fallback: false,
-      mediaType: mediaMode,
-      mediaUrl,
-      mediaProvider: "veo3-mock",
-      videoUrl: mediaUrl,
-      imageUrl: null,
-    };
-    console.log(`[${trace}] generate:done`, {
-      ms: Math.round(performance.now() - startedAt),
-      provider: result.mediaProvider,
-      fallback: result.fallback,
-      safetyStatus: result.safetyStatus,
-    });
-    return result;
+  // VIDEO mode — real Veo generation with polling
+  if (mediaMode === "video") {
+    try {
+      const enhanced = await enhancePrompt({ prompt, twist, memory, style, trace });
+      const videoPrompt = enhanced || `${prompt}. ${twist}. Cinematic, dramatic lighting.`;
+
+      console.log(`[${trace}] video:start`, {
+        videoPromptChars: videoPrompt.length,
+        videoPromptPreview: videoPrompt.slice(0, 120),
+      });
+      const videoStart = performance.now();
+      const videoUrl = await generateVideo(videoPrompt);
+      console.log(`[${trace}] video:ok`, {
+        ms: Math.round(performance.now() - videoStart),
+      });
+
+      const memoryText = memory.length ? ` Callback echoes: ${memory.map((m) => m.twist).join("; ")}.` : "";
+      const usedMemory = memory.length > 0 && Math.random() > 0.4;
+      const narration =
+        style === "mini screenplay"
+          ? `INT. CHAOTIC SET - NIGHT\nPrompt: ${prompt}\nTwist: ${twist}.\nA beat of silence. Then everyone realizes this changes everything.${usedMemory ? memoryText : ""}`
+          : `Under flickering lights, ${twist}. The narrator leans in, voice trembling, while the room recalculates fate.${usedMemory ? memoryText : ""}`;
+
+      const result = {
+        safetyStatus: "safe",
+        generatedScene: narration,
+        usedMemory,
+        fallback: false,
+        mediaType: "video",
+        mediaUrl: videoUrl,
+        mediaProvider: "veo-3",
+        videoUrl,
+        imageUrl: null,
+      };
+
+      console.log(`[${trace}] generate:done`, {
+        ms: Math.round(performance.now() - startedAt),
+        provider: result.mediaProvider,
+        fallback: result.fallback,
+        safetyStatus: result.safetyStatus,
+      });
+
+      return result;
+    } catch (err) {
+      console.error(`[${trace}] video:error`, {
+        message: err?.message,
+        ms: Math.round(performance.now() - startedAt),
+      });
+      const mediaUrl = pickDemoVideo(twist);
+      return {
+        safetyStatus: err?.message === "timeout" ? "timeout" : "error",
+        generatedScene: `In a sudden turn, ${twist}. The crowd gasps as this revelation reshapes the case in seconds.`,
+        usedMemory: false,
+        fallback: true,
+        mediaType: "video",
+        mediaUrl,
+        mediaProvider: "veo3-mock",
+        videoUrl: mediaUrl,
+        imageUrl: null,
+      };
+    }
   }
 
   // IMAGE mode — real Gemini generation with timeout

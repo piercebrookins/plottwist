@@ -85,33 +85,6 @@ export const LobbyView = ({ session, me, onAddBot, onStart, onSetSettings }) => 
               <span className="join-setting-meta">Total rounds</span>
             </label>
 
-            <label className="join-setting-card join-setting-card--prompt">
-              <span className="join-setting-price">Config B</span>
-              <span className="join-setting-label">Prompt pack</span>
-              <select
-                value={session.settings.promptPack}
-                onChange={(e) => onSetSettings({ promptPack: e.target.value })}
-              >
-                <option value="noir">Noir</option>
-                <option value="sciFi">Sci-Fi</option>
-                <option value="fantasy">Fantasy</option>
-              </select>
-              <span className="join-setting-meta">Genre mood</span>
-            </label>
-
-            <label className="join-setting-card join-setting-card--reveal">
-              <span className="join-setting-price">Config C</span>
-              <span className="join-setting-label">Reveal style</span>
-              <select
-                value={session.settings.revealStyle}
-                onChange={(e) => onSetSettings({ revealStyle: e.target.value })}
-              >
-                <option value="dramatic narration">Dramatic narration</option>
-                <option value="mini screenplay">Mini screenplay</option>
-              </select>
-              <span className="join-setting-meta">Output format</span>
-            </label>
-
             <label className="join-setting-card join-setting-card--timer">
               <span className="join-setting-price">Config D</span>
               <span className="join-setting-label">Vote timer</span>
