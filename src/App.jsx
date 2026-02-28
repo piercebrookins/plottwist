@@ -19,7 +19,7 @@ import {
 } from "./game/engine";
 import { GAME_STAGES, MAX_PLAYERS } from "./game/constants";
 import { generateContinuationPrompt, generateScene } from "./game/geminiReal";
-import { loadSession, saveSession } from "./game/storage";
+import { apiCreateRoom, apiJoinRoom, apiSaveRoomMedia } from "./game/roomApi";
 import { currentRound, playerById } from "./game/selectors";
 import { useSessionStore } from "./hooks/useSessionStore";
 import { LandingView } from "./components/LandingView";
@@ -39,8 +39,16 @@ const BOT_NAMES = ["Pixel", "NoirNerd", "Captain Twist", "Glue Gun", "Soda Greml
 function App() {
   const [roomCode, setRoomCode] = useState(() => getIdentityForTab().roomCode || null);
   const [playerId, setPlayerId] = useState(() => getIdentityForTab().playerId || null);
+  const [generationLogs, setGenerationLogs] = useState([]);
   const { session, update } = useSessionStore(roomCode);
   const generatingRoundRef = useRef(null);
+
+  const pushGenerationLog = (entry) => {
+    const text = typeof entry === "string" ? entry : JSON.stringify(entry);
+    const line = `${new Date().toLocaleTimeString()} · ${text}`;
+    setGenerationLogs((prev) => [...prev.slice(-15), line]);
+    console.log("[generation]", text);
+  };
 
   const me = useMemo(() => playerById(session, playerId), [session, playerId]);
   const round = currentRound(session);
@@ -80,33 +88,38 @@ function App() {
     setPlayerId(null);
   }, [session, playerId]);
 
-  const createRoom = (hostName) => {
-    const next = createSession(hostName);
-    const nextPlayerId = next.players[0].id;
-
-    saveSession(next);
-    saveIdentityForTab({ roomCode: next.roomCode, playerId: nextPlayerId });
-
-    setRoomCode(next.roomCode);
-    setPlayerId(nextPlayerId);
+  const createRoom = async (hostName) => {
+    try {
+      const { session: next, playerId: nextPlayerId } = await apiCreateRoom(hostName);
+      saveIdentityForTab({ roomCode: next.roomCode, playerId: nextPlayerId });
+      setRoomCode(next.roomCode);
+      setPlayerId(nextPlayerId);
+    } catch (error) {
+      console.error("createRoom failed", error);
+      alert(`Create room failed: ${error.message || "unknown error"}`);
+    }
   };
 
-  const joinRoom = (code, name) => {
-    const existing = loadSession(code);
-    if (!existing) return alert("Room not found or expired");
+  const joinRoom = async (code, name) => {
+    try {
+      const { session: joined, playerId: nextPlayerId } = await apiJoinRoom({
+        roomCode: code,
+        name: name || "Player",
+      });
 
-    const joined = addPlayer(existing, name || "Player");
-    const mePlayer = joined.players.find((p) => p.name.toLowerCase() === (name || "Player").toLowerCase());
-    const nextPlayerId = mePlayer?.id || joined.players.at(-1).id;
-
-    saveSession(joined);
-    saveIdentityForTab({ roomCode: joined.roomCode, playerId: nextPlayerId });
-
-    setRoomCode(joined.roomCode);
-    setPlayerId(nextPlayerId);
+      saveIdentityForTab({ roomCode: joined.roomCode, playerId: nextPlayerId });
+      setRoomCode(joined.roomCode);
+      setPlayerId(nextPlayerId);
+    } catch (error) {
+      console.error("joinRoom failed", error);
+      alert(`Join failed: ${error.message || "Room not found or expired"}`);
+    }
   };
 
-  const apply = (fn) => session && update(fn(session));
+  const apply = async (fn) => {
+    if (!session) return;
+    await update(fn(session));
+  };
 
   const startGame = () => apply((s) => beginRound(setStage(s, GAME_STAGES.PROMPT)));
 
@@ -121,24 +134,87 @@ function App() {
     generatingRoundRef.current = roundId;
 
     try {
-      const closed = closeSubmissions(session);
-      update(closed);
+      setGenerationLogs([]);
+      pushGenerationLog({ event: "round-generation-start", roomCode: session.roomCode, roundId, mediaMode: session.settings.mediaMode });
 
-      const r = currentRound(closed);
+      const closed = closeSubmissions(session);
+      const savedClosed = (await update(closed)) || closed;
+
+      const r = currentRound(savedClosed);
+      pushGenerationLog({
+        event: "submissions-ready",
+        count: r.submissions.length,
+        mediaMode: savedClosed.settings.mediaMode,
+        revealStyle: savedClosed.settings.revealStyle,
+      });
+
       const generated = await Promise.all(
-        r.submissions.map(async (submission) => {
-          const ai = await generateScene({
-            prompt: r.prompt,
-            twist: submission.text,
-            memory: closed.memory,
-            style: closed.settings.revealStyle,
-            mediaMode: closed.settings.mediaMode,
-          });
-          return { ...submission, ...ai };
+        r.submissions.map(async (submission, idx) => {
+          const startedAt = performance.now();
+          pushGenerationLog({ event: "submission-start", index: idx + 1, playerId: submission.playerId, twist: submission.text });
+
+          try {
+            const ai = await generateScene({
+              prompt: r.prompt,
+              twist: submission.text,
+              memory: savedClosed.memory,
+              style: savedClosed.settings.revealStyle,
+              mediaMode: savedClosed.settings.mediaMode,
+            });
+
+            const normalized = { ...submission, ...ai };
+            const isLargeDataUrl =
+              normalized.mediaType === "image" &&
+              typeof normalized.mediaUrl === "string" &&
+              normalized.mediaUrl.startsWith("data:");
+
+            if (isLargeDataUrl) {
+              const mediaId = normalized.id;
+              const mimeType = normalized.mediaUrl.slice(5, normalized.mediaUrl.indexOf(";")) || "image/png";
+
+              pushGenerationLog({ event: "media-offload-start", index: idx + 1, mediaId });
+              const { mediaUrl } = await apiSaveRoomMedia({
+                roomCode: savedClosed.roomCode,
+                mediaId,
+                dataUrl: normalized.mediaUrl,
+                mimeType,
+              });
+
+              normalized.mediaUrl = mediaUrl;
+              normalized.imageUrl = mediaUrl;
+              pushGenerationLog({ event: "media-offload-done", index: idx + 1, mediaId });
+            }
+
+            pushGenerationLog({
+              event: "submission-done",
+              index: idx + 1,
+              ms: Math.round(performance.now() - startedAt),
+              mediaType: normalized.mediaType,
+              provider: normalized.mediaProvider,
+              fallback: normalized.fallback,
+              safetyStatus: normalized.safetyStatus,
+            });
+
+            return normalized;
+          } catch (error) {
+            pushGenerationLog({ event: "submission-error", index: idx + 1, message: error.message });
+            throw error;
+          }
         })
       );
 
-      update(withGeneratedScenes(closed, generated));
+      pushGenerationLog({ event: "round-generation-complete", generated: generated.length });
+      const voteReady = withGeneratedScenes(savedClosed, generated);
+      const persistedVote = await update(voteReady);
+      if (!persistedVote || persistedVote.status !== GAME_STAGES.VOTE) {
+        pushGenerationLog({
+          event: "stage-transition-failed",
+          expected: GAME_STAGES.VOTE,
+          actual: persistedVote?.status || "unknown",
+        });
+      } else {
+        pushGenerationLog({ event: "stage-transition-ok", status: persistedVote.status });
+      }
     } finally {
       generatingRoundRef.current = null;
     }
@@ -233,7 +309,23 @@ function App() {
   }
 
   if (session.status === GAME_STAGES.GENERATE) {
-    return <div className="loading">Generating cinematic chaos…</div>;
+    return (
+      <div className="loading">
+        <div>
+          <div>Generating cinematic chaos…</div>
+          <div className="card" style={{ marginTop: 12, textAlign: "left", maxWidth: 780 }}>
+            <h3 style={{ marginTop: 0 }}>Generation debug</h3>
+            <ul className="clean-list">
+              {(generationLogs.length ? generationLogs : ["Waiting for generation logs…"]).map((line, idx) => (
+                <li key={`${idx}-${line}`} style={{ fontFamily: "monospace", fontSize: 12, opacity: 0.92 }}>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (session.status === GAME_STAGES.VOTE && round) {

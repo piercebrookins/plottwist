@@ -1,0 +1,51 @@
+const jsonHeaders = { "Content-Type": "application/json" };
+
+const parse = async (res) => {
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = payload?.error || JSON.stringify(payload || {});
+    throw new Error(`HTTP ${res.status}: ${detail}`);
+  }
+  return payload;
+};
+
+export const apiCreateRoom = async (hostName) => {
+  const res = await fetch("/api/rooms/create", {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ hostName }),
+  });
+  return parse(res);
+};
+
+export const apiJoinRoom = async ({ roomCode, name }) => {
+  const res = await fetch("/api/rooms/join", {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ roomCode, name }),
+  });
+  return parse(res);
+};
+
+export const apiGetRoomSession = async (roomCode) => {
+  const res = await fetch(`/api/rooms/session?code=${encodeURIComponent(roomCode)}`);
+  return parse(res);
+};
+
+export const apiUpdateRoomSession = async ({ session, expectedUpdatedAt }) => {
+  const res = await fetch("/api/rooms/update", {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ session, expectedUpdatedAt }),
+  });
+  return parse(res);
+};
+
+export const apiSaveRoomMedia = async ({ roomCode, mediaId, dataUrl, mimeType }) => {
+  const res = await fetch("/api/rooms/media-save", {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ roomCode, mediaId, dataUrl, mimeType }),
+  });
+  return parse(res);
+};

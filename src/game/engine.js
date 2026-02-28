@@ -155,6 +155,7 @@ export const closeSubmissions = (session) => {
 
   const knownPlayerIds = new Set(round.submissions.map((s) => s.playerId));
   const missing = session.players
+    .filter((p) => !p.isHost)
     .filter((p) => !knownPlayerIds.has(p.id))
     .map((p) => ({
       id: uid(),
@@ -258,9 +259,10 @@ export const closeVoting = (session) => {
   if (!round) return session;
 
   const votes = getSubmissionVotes(round);
-  const ranked = [...round.submissions].sort(
-    (a, b) => (votes.get(b.id) || 0) - (votes.get(a.id) || 0)
-  );
+  const nonHostIds = new Set(session.players.filter((p) => !p.isHost).map((p) => p.id));
+  const ranked = [...round.submissions]
+    .filter((s) => nonHostIds.has(s.playerId))
+    .sort((a, b) => (votes.get(b.id) || 0) - (votes.get(a.id) || 0));
   const winner = ranked[0] || null;
 
   return {
@@ -334,9 +336,10 @@ export const completeRound = (session) => {
   if (!round || round.scoredAt) return session;
 
   const votes = getSubmissionVotes(round);
-  const ranked = [...round.submissions].sort(
-    (a, b) => (votes.get(b.id) || 0) - (votes.get(a.id) || 0)
-  );
+  const nonHostIds = new Set(session.players.filter((p) => !p.isHost).map((p) => p.id));
+  const ranked = [...round.submissions]
+    .filter((s) => nonHostIds.has(s.playerId))
+    .sort((a, b) => (votes.get(b.id) || 0) - (votes.get(a.id) || 0));
   const winners = ranked.filter(
     (s) => (votes.get(s.id) || 0) === (votes.get(ranked[0]?.id) || 0)
   );

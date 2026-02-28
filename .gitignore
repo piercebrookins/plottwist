@@ -42,3 +42,4 @@ desktop.ini
 
 # --- Optional local tooling files ---
 .Rhistory
+.vercel

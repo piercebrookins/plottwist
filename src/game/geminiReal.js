@@ -16,17 +16,27 @@ const blocked = (text) => hasProfanity(text);
 const TIMEOUT_MS = 30_000;
 
 /** Call the enhance-prompt endpoint; returns enhanced text or null on failure. */
-async function enhancePrompt({ prompt, twist, memory, style }) {
+async function enhancePrompt({ prompt, twist, memory, style, trace }) {
+  const startedAt = performance.now();
   try {
+    console.log(`[${trace}] enhance:start`, { memoryCount: memory?.length || 0, style });
     const res = await fetch("/api/enhance-prompt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, twist, memory, style }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`[${trace}] enhance:http-fail`, { status: res.status });
+      return null;
+    }
     const { enhancedPrompt } = await res.json();
+    console.log(`[${trace}] enhance:ok`, {
+      ms: Math.round(performance.now() - startedAt),
+      chars: (enhancedPrompt || "").length,
+    });
     return enhancedPrompt || null;
-  } catch {
+  } catch (error) {
+    console.error(`[${trace}] enhance:error`, error);
     return null;
   }
 }
@@ -43,10 +53,21 @@ function withTimeout(promise, ms) {
 }
 
 export const generateScene = async ({ prompt, twist, memory, style, mediaMode = "video" }) => {
+  const trace = `gen-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  const startedAt = performance.now();
+  console.log(`[${trace}] generate:start`, {
+    mediaMode,
+    promptChars: (prompt || "").length,
+    twistChars: (twist || "").length,
+    memoryCount: memory?.length || 0,
+    style,
+  });
+
   // Placeholder mode — pass through unchanged
   if (mediaMode === "placeholder") {
+    console.log(`[${trace}] generate:placeholder-mode`);
     const placeholder = pickPlaceholderMedia(twist || prompt);
-    return {
+    const result = {
       safetyStatus: "safe",
       generatedScene: `${placeholder.generatedScene} Prompt: ${prompt} Twist: ${twist}.`,
       usedMemory: false,
@@ -61,6 +82,7 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
 
   // Profanity filter
   if (blocked(twist)) {
+    console.warn(`[${trace}] generate:blocked-by-safety`);
     const mediaUrl = mediaMode === "image" ? pickDemoImage("safe fallback") : pickDemoVideo("safe fallback");
     return {
       safetyStatus: "blocked",
@@ -78,6 +100,7 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
 
   // For non-image modes, fall back to mock-style generation (video not yet supported via Gemini)
   if (mediaMode !== "image") {
+    console.log(`[${trace}] generate:mock-non-image`, { mediaMode });
     const mediaUrl = pickDemoVideo(twist);
     const memoryText = memory.length ? ` Callback echoes: ${memory.map((m) => m.twist).join("; ")}.` : "";
     const usedMemory = memory.length > 0 && Math.random() > 0.4;
@@ -96,6 +119,13 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
       videoUrl: mediaUrl,
       imageUrl: null,
     };
+    console.log(`[${trace}] generate:done`, {
+      ms: Math.round(performance.now() - startedAt),
+      provider: result.mediaProvider,
+      fallback: result.fallback,
+      safetyStatus: result.safetyStatus,
+    });
+    return result;
   }
 
   // IMAGE mode — real Gemini generation with timeout
@@ -103,11 +133,20 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
     const result = await withTimeout(
       (async () => {
         // Step 1: enhance prompt (graceful fallback to simple concat)
-        const enhanced = await enhancePrompt({ prompt, twist, memory, style });
+        const enhanced = await enhancePrompt({ prompt, twist, memory, style, trace });
         const imagePrompt = enhanced || `${prompt}. ${twist}. Cinematic, dramatic lighting.`;
 
         // Step 2: generate image via Gemini
+        console.log(`[${trace}] image:start`, {
+          imagePromptChars: imagePrompt.length,
+          imagePromptPreview: imagePrompt.slice(0, 120),
+        });
+        const imageStart = performance.now();
         const dataUrl = await generateImage(imagePrompt);
+        console.log(`[${trace}] image:ok`, {
+          ms: Math.round(performance.now() - imageStart),
+          dataUrlChars: (dataUrl || "").length,
+        });
 
         const memoryText = memory.length ? ` Callback echoes: ${memory.map((m) => m.twist).join("; ")}.` : "";
         const usedMemory = memory.length > 0 && Math.random() > 0.4;
@@ -116,7 +155,7 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
             ? `INT. CHAOTIC SET - NIGHT\nPrompt: ${prompt}\nTwist: ${twist}.\nA beat of silence. Then everyone realizes this changes everything.${usedMemory ? memoryText : ""}`
             : `Under flickering lights, ${twist}. The narrator leans in, voice trembling, while the room recalculates fate.${usedMemory ? memoryText : ""}`;
 
-        return {
+        const result = {
           safetyStatus: "safe",
           generatedScene: narration,
           usedMemory,
@@ -127,6 +166,15 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
           imageUrl: dataUrl,
           videoUrl: null,
         };
+
+        console.log(`[${trace}] generate:done`, {
+          ms: Math.round(performance.now() - startedAt),
+          provider: result.mediaProvider,
+          fallback: result.fallback,
+          safetyStatus: result.safetyStatus,
+        });
+
+        return result;
       })(),
       TIMEOUT_MS,
     );
@@ -134,8 +182,12 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
     return result;
   } catch (err) {
     // Timeout or generation failure — graceful fallback to demo image
+    console.error(`[${trace}] generate:error`, {
+      message: err?.message,
+      ms: Math.round(performance.now() - startedAt),
+    });
     const mediaUrl = pickDemoImage(twist);
-    return {
+    const result = {
       safetyStatus: err.message === "timeout" ? "timeout" : "error",
       generatedScene: `In a sudden turn, ${twist}. The crowd gasps as this revelation reshapes the case in seconds.`,
       usedMemory: false,
@@ -146,5 +198,11 @@ export const generateScene = async ({ prompt, twist, memory, style, mediaMode = 
       imageUrl: mediaUrl,
       videoUrl: null,
     };
+    console.warn(`[${trace}] generate:fallback`, {
+      provider: result.mediaProvider,
+      safetyStatus: result.safetyStatus,
+      ms: Math.round(performance.now() - startedAt),
+    });
+    return result;
   }
 };
