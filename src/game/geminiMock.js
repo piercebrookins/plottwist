@@ -1,3 +1,5 @@
+import { pickDemoVideo } from "./videoMock";
+
 const PROFANITY = ["damn", "hell", "shit", "fuck"];
 
 const hasProfanity = (text) =>
@@ -17,6 +19,8 @@ export const generateScene = async ({ prompt, twist, memory, style }) => {
         "Content safety filter stepped in. The cameras cut to static, a dramatic gasp echoes, and the host quickly pivots to the next scene.",
       usedMemory: false,
       fallback: true,
+      videoUrl: pickDemoVideo("safe fallback"),
+      videoProvider: "veo3-mock",
     };
   }
 
@@ -26,6 +30,8 @@ export const generateScene = async ({ prompt, twist, memory, style }) => {
       generatedScene: `In a sudden turn, ${twist}. The crowd gasps as this revelation reshapes the case in seconds.`,
       usedMemory: false,
       fallback: true,
+      videoUrl: pickDemoVideo(twist),
+      videoProvider: "veo3-mock",
     };
   }
 
@@ -46,5 +52,7 @@ export const generateScene = async ({ prompt, twist, memory, style }) => {
     generatedScene: narration,
     usedMemory,
     fallback: false,
+    videoUrl: pickDemoVideo(twist),
+    videoProvider: "veo3-mock",
   };
 };

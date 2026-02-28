@@ -13,6 +13,38 @@ Open the local URL in multiple tabs/devices:
 - one tab for host display
 - others for player companion screens
 
+## Ngrok testing (reserved domain)
+
+This repo is configured for your ngrok domain:
+`unlicentiated-unsqueamishly-mahalia.ngrok-free.app`
+
+1. Start Vite on all interfaces:
+```bash
+npm run dev:host
+```
+
+2. In another terminal, start ngrok:
+```bash
+ngrok http --domain=unlicentiated-unsqueamishly-mahalia.ngrok-free.app 5173
+```
+
+3. Open:
+`https://unlicentiated-unsqueamishly-mahalia.ngrok-free.app`
+
+### Environment config
+
+- `.env` is already set for your domain.
+- Copy `.env.example` if you need to reset defaults.
+
+## Deploy to Vercel (quick)
+
+```bash
+npm i -g vercel
+vercel
+```
+
+Set project framework to **Vite** when prompted.
+
 ## What’s implemented
 
 - ✅ Room creation and join with 4-char room code

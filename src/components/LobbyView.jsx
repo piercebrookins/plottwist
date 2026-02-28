@@ -35,7 +35,7 @@ export const LobbyView = ({ session, me, onAddBot, onStart, onSetSettings }) => 
       <div className="grid three">
         <StatPill label="Players" value={`${session.players.length}/10`} />
         <StatPill label="Rounds" value={session.settings.rounds} />
-        <StatPill label="Style" value={session.settings.revealStyle} />
+        <StatPill label="Vote timer" value={`${session.settings.voteSeconds}s`} />
       </div>
 
       {isHost ? (
@@ -73,6 +73,19 @@ export const LobbyView = ({ session, me, onAddBot, onStart, onSetSettings }) => 
             >
               <option value="dramatic narration">Dramatic narration</option>
               <option value="mini screenplay">Mini screenplay</option>
+            </select>
+          </label>
+          <label>
+            Vote timer
+            <select
+              value={session.settings.voteSeconds}
+              onChange={(e) => onSetSettings({ voteSeconds: Number(e.target.value) })}
+            >
+              {[15, 20, 25, 30].map((n) => (
+                <option key={n} value={n}>
+                  {n}s
+                </option>
+              ))}
             </select>
           </label>
         </div>

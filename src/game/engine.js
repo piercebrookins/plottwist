@@ -109,6 +109,9 @@ export const withSubmission = (session, { playerId, text }) => {
   const round = session.rounds.at(-1);
   if (!round) return session;
 
+  const player = session.players.find((p) => p.id === playerId);
+  if (!player || player.isHost) return session;
+
   const sanitizedText = (text || "").trim();
   const value = sanitizedText || FALLBACK_TWIST;
 

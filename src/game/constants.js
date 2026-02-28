@@ -35,7 +35,8 @@ export const PROMPT_PACKS = {
 
 export const DEFAULT_SETTINGS = {
   rounds: 3,
-  submitSeconds: 35,
+  submitSeconds: 30,
+  voteSeconds: 20,
   revealStyle: "dramatic narration",
   memoryLimit: 5,
   tieMode: "split",
